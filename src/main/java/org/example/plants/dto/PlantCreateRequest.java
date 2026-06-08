@@ -1,4 +1,9 @@
 package org.example.plants.dto;
 
-public class PlantCreateRequest {
-}
+import jakarta.validation.constraints.NotBlank;
+
+public record PlantCreateRequest(
+        @NotBlank String name,
+        String species,
+        String location) {}
+
