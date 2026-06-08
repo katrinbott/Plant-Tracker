@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Tracker</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: sans-serif;
+            background: #f5f9f5;
+            color: #333;
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        h1 { color: #2d6a2d; margin-bottom: 1rem; }
+
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .tab {
+            padding: 0.5rem 1.25rem;
+            border: 2px solid #2d6a2d;
+            border-radius: 4px;
+            cursor: pointer;
+            background: white;
+            color: #2d6a2d;
+            font-size: 1rem;
+        }
+        .tab.active { background: #2d6a2d; color: white; }
+
+        .section { display: none; }
+        .section.active { display: block; }
+
+        form {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        label { display: block; margin-bottom: 0.75rem; font-size: 0.9rem; color: #555; }
+        input, select, textarea {
+            display: block;
+            width: 100%;
+            margin-top: 0.25rem;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        button[type=submit] {
+            margin-top: 0.75rem;
+            padding: 0.6rem 1.25rem;
+            background: #2d6a2d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        button[type=submit]:hover { background: #245224; }
+
+        .list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .card-info strong { display: block; margin-bottom: 0.25rem; }
+        .card-info span { font-size: 0.85rem; color: #666; }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #c0392b;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0 0.25rem;
+            flex-shrink: 0;
+        }
+        .delete-btn:hover { color: #922b21; }
+
+        .error { color: #c0392b; font-size: 0.9rem; margin-top: 0.5rem; }
+        .empty { color: #888; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>Plant Tracker</h1>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="plants" onclick="showTab('plants')">Plants</button>
+        <button class="tab" data-tab="watering" onclick="showTab('watering')">Watering</button>
+        <button class="tab" data-tab="history" onclick="showTab('history')">History</button>
+    </div>
+
+    <div id="plants" class="section active">
+        <form onsubmit="addPlant(event)">
+            <label>Name* <input type="text" id="plant-name" required placeholder="e.g. Monstera"></label>
+            <label>Species <input type="text" id="plant-species" placeholder="e.g. Monstera deliciosa"></label>
+            <label>Location <input type="text" id="plant-location" placeholder="e.g. Living room"></label>
+            <button type="submit">Add Plant</button>
+            <div class="error" id="plant-error"></div>
+        </form>
+        <div class="list" id="plant-list"></div>
+    </div>
+
+    <div id="watering" class="section">
+        <form onsubmit="recordWatering(event)">
+            <label>Plant* <select id="watering-plant" required></select></label>
+            <label>Amount (ml) <input type="number" id="watering-amount" min="1" placeholder="e.g. 200"></label>
+            <label>Note <input type="text" id="watering-note" placeholder="e.g. looked dry"></label>
+            <button type="submit">Record Watering</button>
+            <div class="error" id="watering-error"></div>
+        </form>
+        <div class="list" id="watering-list"></div>
+    </div>
+
+    <div id="history" class="section">
+        <div style="margin-bottom: 1.5rem;">
+            <label style="font-size: 0.9rem; color: #555;">
+                Plant
+                <select id="history-plant" onchange="loadHistory()" style="display:block; width:100%; margin-top:0.25rem; padding:0.5rem; border:1px solid #ccc; border-radius:4px; font-size:1rem;"></select>
+            </label>
+        </div>
+        <div id="history-stats" style="display:none; gap:0.75rem; margin-bottom:1.5rem;"></div>
+        <div id="history-chart-container" style="display:none; background:white; padding:1rem; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); margin-bottom:1.5rem;">
+            <canvas id="history-chart"></canvas>
+        </div>
+        <div class="list" id="history-list"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

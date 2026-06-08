@@ -12,6 +12,8 @@ A Spring Boot REST API with a vanilla JS frontend for tracking houseplants and t
 | Database | PostgreSQL |
 | Validation | spring-boot-starter-validation |
 | Build | Maven |
+| Frontend | Vanilla HTML/JS served as static resources |
+| Charting | Chart.js 4.4.9 + chartjs-adapter-date-fns |
 
 ## Package Structure
 
@@ -38,6 +40,19 @@ org.example.plants
     └── PlantAnalytics.java          # record: totalWaterings, averageDaysBetweenWaterings, daysSinceLastWatering
 ```
 
+## Frontend
+
+Static files served by Spring Boot from `src/main/resources/static/`:
+
+- **`index.html`** — three-tab layout: Plants, Watering, History
+- **`app.js`** — all API calls via `fetch()`; no build tooling or framework
+
+| Tab | Features |
+|---|---|
+| Plants | Add a plant (name, species, location), list all plants, delete |
+| Watering | Record a watering event (plant dropdown, amount, note), list all events, delete |
+| History | Select a plant → analytics stat cards + time-axis line chart of watering events |
+
 ## Database Schema
 
 ```sql
@@ -62,7 +77,7 @@ INDEX idx_watering_events_watered_at ON watering_events(watered_at)
 ```
 
 - Schema is created from `schema.sql`; Hibernate is set to `validate` (not auto-create)
-- Seed data in `data.sql` inserts 2 initial plants on every startup
+- Seed data in `data.sql` inserts 2 plants and 3 watering events on startup
 - Credentials are supplied via environment variables `DB_USERNAME` and `DB_PASSWORD`
 
 ## REST API
