@@ -25,5 +25,44 @@ public class WateringEvent {
         wateredAt = LocalDateTime.now();
     }
 
-    // getters and setters
+    public Long getId() {
+        return id;
+    }
+
+    @JsonIgnore
+    public Plant getPlant() {
+        return plant;
+    }
+
+    public void setPlant(Plant plant) {
+        this.plant = plant;
+    }
+
+    public Long getPlantId() {
+        return plant != null ? plant.getId() : null;
+    }
+
+    public LocalDateTime getWateredAt() {
+        return wateredAt;
+    }
+
+    public void setWateredAt(LocalDateTime wateredAt) {
+        this.wateredAt = wateredAt;
+    }
+
+    public Integer getAmountMl() {
+        return amountMl;
+    }
+
+    public void setAmountMl(Integer amountMl) {
+        this.amountMl = amountMl;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
+    }
 }
