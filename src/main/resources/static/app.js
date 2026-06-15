@@ -41,7 +41,10 @@ async function loadPlants() {
                         <strong>${p.name}</strong>
                         <span>${[p.species, p.location].filter(Boolean).join(' · ')}</span>
                     </div>
-                    <button class="delete-btn" onclick="deletePlant(${p.id})" title="Delete">✕</button>
+                  <div style="display:flex; gap:0.5rem; align-items:center;">
+                      <a href="/plants/${p.id}/qr" target="_blank" class="qr-btn" title="QR Code">QR</a>
+                      <button class="delete-btn" onclick="deletePlant(${p.id})" title="Delete">✕</button>
+                  </div>
                 </div>
             `).join('');
     } catch (e) {

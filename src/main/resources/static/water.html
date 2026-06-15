@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Plant</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: sans-serif;
+            background: #f5f9f5;
+            color: #333;
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        h1 { color: #2d6a2d; margin-bottom: 1rem; }
+
+        form {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        label { display: block; margin-bottom: 0.75rem; font-size: 0.9rem; color: #555; }
+
+        input {
+            display: block;
+            width: 100%;
+            margin-top: 0.25rem;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        button[type=submit] {
+            margin-top: 0.75rem;
+            padding: 0.6rem 1.25rem;
+            background: #2d6a2d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        button[type=submit]:hover { background: #245224; }
+
+        #plant-name {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #2d6a2d;
+            margin-bottom: 1.5rem;
+        }
+
+        #message { margin-top: 0.75rem; font-size: 0.9rem; }
+    </style>
+</head>
+    <body>
+        <h1>Water Plant</h1>
+        <div id="plant-name">Loading...</div>
+
+        <form onsubmit="recordWatering(event)">
+            <label>Amount (ml) <input type="number" id="amount" inputmode="numeric"></label>
+            <label>Note        <input type="text"   id="note"></label>
+            <button type="submit">Record Watering</button>
+        </form>
+
+        <div id="message"></div>
+
+        <script>
+            const plantId = new URLSearchParams(window.location.search).get('plantId');
+
+            fetch('/plants')
+                .then(r => r.json())
+                .then(plants => {
+                    const plant = plants.find(p => p.id == plantId);
+                    document.getElementById('plant-name').textContent = plant?.name ?? 'Unknown plant';
+                });
+
+            async function recordWatering(event) {
+                event.preventDefault();
+                const amountVal = document.getElementById('amount').value;
+                const res = await fetch('/watering', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        plantId: parseInt(plantId),
+                        amountMl: amountVal ? parseInt(amountVal) : null,
+                        note: document.getElementById('note').value || null,
+                    })
+                });
+                const msg = document.getElementById('message');
+                msg.textContent = res.ok ? 'Watered!' : 'Failed to record watering.';
+            }
+        </script>
+    </body>
+</html>
