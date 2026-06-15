@@ -85,6 +85,7 @@ async function loadWateringEvents() {
     const list = document.getElementById('watering-list');
     try {
         const events = await apiFetch('/watering');
+        events.sort((a, b) => new Date(b.wateredAt) - new Date(a.wateredAt)); // newest first
         list.innerHTML = events.length === 0
             ? '<p class="empty">No watering events yet.</p>'
             : events.map(e => {
