@@ -17,11 +17,14 @@ public class WateringService {
 
     private final WateringEventRepository wateringEventRepository;
     private final PlantRepository plantRepository;
+    private final WeatherService weatherService;
 
     public WateringService(WateringEventRepository wateringEventRepository,
-                           PlantRepository plantRepository) {
+                           PlantRepository plantRepository,
+                           WeatherService weatherService) {
         this.wateringEventRepository = wateringEventRepository;
         this.plantRepository = plantRepository;
+        this.weatherService = weatherService;
     }
 
     public WateringEvent recordWatering(Long plantId, Integer amountMl, String note) {
@@ -33,6 +36,16 @@ public class WateringService {
         wateringEvent.setWateredAt(LocalDateTime.now());
         wateringEvent.setAmountMl(amountMl);
         wateringEvent.setNote(note);
+
+        WeatherService.WeatherData weather = weatherService.fetchCurrent();
+
+        if (weather != null) {
+            wateringEvent.setTemperatureC(weather.temperatureC());
+            wateringEvent.setHumidityPercent(weather.humidityPercent());
+            wateringEvent.setWeatherCode(weather.weatherCode());
+            wateringEvent.setMinTemperatureC(weather.minTemperatureC());
+            wateringEvent.setMaxTemperatureC(weather.maxTemperatureC());
+        }
 
         return wateringEventRepository.save(wateringEvent);
     }
