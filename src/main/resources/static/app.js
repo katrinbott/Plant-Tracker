@@ -1,5 +1,15 @@
 let plants = [];
 
+const WEATHER_CODES = {
+    0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+    45: 'Fog', 48: 'Icy fog',
+    51: 'Light drizzle', 53: 'Drizzle', 55: 'Heavy drizzle',
+    61: 'Light rain', 63: 'Rain', 65: 'Heavy rain',
+    71: 'Light snow', 73: 'Snow', 75: 'Heavy snow',
+    80: 'Light showers', 81: 'Showers', 82: 'Heavy showers',
+    95: 'Thunderstorm',
+};
+
 async function apiFetch(path, options = {}) {
     const res = await fetch(path, {
         headers: { 'Content-Type': 'application/json' },
@@ -91,7 +101,10 @@ async function loadWateringEvents() {
             : events.map(e => {
                 const plant = plants.find(p => p.id === e.plantId);
                 const date = new Date(e.wateredAt).toLocaleString();
-                const details = [e.amountMl ? `${e.amountMl} ml` : null, e.note].filter(Boolean).join(' · ');
+                const weather = e.minTemperatureC != null
+                    ? `${e.minTemperatureC}°C / ${e.maxTemperatureC}°C  · ${WEATHER_CODES[e.weatherCode] ?? 'Unknown'}`
+                    : null;
+                const details = [e.amountMl ? `${e.amountMl} ml` : null, e.note, weather].filter(Boolean).join(' · ');
                 return `
                     <div class="card">
                         <div class="card-info">
@@ -146,6 +159,7 @@ function populatePlantDropdown() {
 // ── History ───────────────────────────────────────────────────────────────────
 
 let historyChart = null;
+let temperatureChart = null;
 
 function populateHistoryDropdown() {
     const select = document.getElementById('history-plant');
@@ -157,6 +171,7 @@ function populateHistoryDropdown() {
 async function loadHistory() {
     const list = document.getElementById('history-list');
     const chartContainer = document.getElementById('history-chart-container');
+    const tempChartContainer = document.getElementById('temperature-chart-container');
     const statsContainer = document.getElementById('history-stats');
     const plantId = document.getElementById('history-plant').value;
     if (!plantId) return;
@@ -168,6 +183,7 @@ async function loadHistory() {
 
         if (events.length === 0) {
             chartContainer.style.display = 'none';
+            tempChartContainer.style.display = 'none';
             statsContainer.style.display = 'none';
             list.innerHTML = '<p class="empty">No watering events recorded yet.</p>';
             return;
@@ -176,6 +192,11 @@ async function loadHistory() {
         renderStats(analytics, statsContainer);
         chartContainer.style.display = 'block';
         renderHistoryChart(events);
+
+        const hasTemperatureData = events.some(e => e.temperatureC != null);
+//        tempChartContainer.style.display = hasTemperatureData ? 'block' : 'none';
+        tempChartContainer.style.display = 'block';
+        if (hasTemperatureData) renderTemperatureChart(events);
 
         list.innerHTML = events.map(e => {
             const date = new Date(e.wateredAt).toLocaleString();
@@ -253,6 +274,70 @@ function renderHistoryChart(events) {
                 y: {
                     beginAtZero: true,
                     title: { display: true, text: 'Amount (ml)' }
+                }
+            }
+        }
+    });
+}
+
+function renderTemperatureChart(events) {
+    const sorted = [...events].reverse();
+
+    if (temperatureChart) {
+        temperatureChart.destroy();
+    }
+
+    const ctx = document.getElementById('temperature-chart').getContext('2d');
+    temperatureChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
+                {
+                    label: 'Min °C',
+                    data: sorted.map(e => ({ x: e.wateredAt, y: e.minTemperatureC ?? null })),
+                    borderColor: '#2980b9',
+                    backgroundColor: '#2980b9',
+                    pointRadius: 3,
+                    pointHoverRadius: 7,
+                    tension: 0,
+                    borderDash: [7,7],
+                    borderWidth: 1,
+                },
+                {
+                    label: 'Max °C',
+                    data: sorted.map(e => ({ x: e.wateredAt, y: e.maxTemperatureC ?? null })),
+                    borderColor: '#c0392b',
+                    backgroundColor: '#c0392b',
+                    pointRadius: 3,
+                    pointHoverRadius: 7,
+                    tension: 0,
+                    borderDash: [7,7],
+                    borderWidth: 1,
+                },
+                {
+                    label: 'Current °C',
+                    data: sorted.map(e => ({ x: e.wateredAt, y: e.temperatureC ?? null })),
+                    borderColor: '#2d6a2d',
+                    backgroundColor: '#2d6a2d',
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    tension: 0,
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true },
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                    title: { display: true, text: 'Date' }
+                },
+                y: {
+                    title: { display: true, text: 'Temperature (°C)' }
                 }
             }
         }
