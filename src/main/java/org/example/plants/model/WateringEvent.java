@@ -22,6 +22,21 @@ public class WateringEvent {
 
     private String note;
 
+    @Column(name = "temperature_c")
+    private Double temperatureC;
+
+    @Column(name = "min_temperature_c")
+    private Double minTemperatureC;
+
+    @Column(name = "max_temperature_c")
+    private Double maxTemperatureC;
+
+    @Column(name = "humidity_percent")
+    private Double humidityPercent;
+
+    @Column(name = "weather_code")
+    private Integer weatherCode;
+
     @PrePersist
     void prePersist() {
         wateredAt = LocalDateTime.now();
@@ -66,5 +81,34 @@ public class WateringEvent {
 
     public void setNote(String note) {
         this.note = note;
+    }
+    public Double getTemperatureC() { return temperatureC; }
+
+    public void setTemperatureC(Double temperatureC) { this.temperatureC = temperatureC; }
+
+    public Double getMinTemperatureC() { return minTemperatureC;}
+
+    public void setMinTemperatureC(Double minTemperatureC) {
+        this.minTemperatureC = minTemperatureC;
+    }
+
+    public Double getMaxTemperatureC() { return maxTemperatureC;}
+
+    public void setMaxTemperatureC(Double maxTemperatureC) { this.maxTemperatureC = maxTemperatureC; }
+
+    public Double getHumidityPercent() {
+        return humidityPercent;
+    }
+
+    public void setHumidityPercent(Double humidityPercent) {
+        this.humidityPercent = humidityPercent;
+    }
+
+    public Integer getWeatherCode() {
+        return weatherCode;
+    }
+
+    public void setWeatherCode(Integer weatherCode) {
+        this.weatherCode = weatherCode;
     }
 }
