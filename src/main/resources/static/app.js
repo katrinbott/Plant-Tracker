@@ -1,6 +1,16 @@
 let plants = [];
 let imagesByPlantId = {};
 
+const WEATHER_EMOJIS = {
+    0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+    45: '🌫️', 48: '🌫️',
+    51: '🌦️', 53: '🌦️', 55: '🌧️',
+    61: '🌧️', 63: '🌧️', 65: '🌧️',
+    71: '🌨️', 73: '🌨️', 75: '❄️',
+    80: '🌦️', 81: '🌧️', 82: '⛈️',
+    95: '⛈️',
+};
+
 const WEATHER_CODES = {
     0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
     45: 'Fog', 48: 'Icy fog',
@@ -31,6 +41,7 @@ function showTab(name) {
     if (name === 'watering') {
         populatePlantDropdown();
         loadWateringEvents();
+        loadLocation();
     }
     if (name === 'history') {
         populateHistoryDropdown();
@@ -303,6 +314,137 @@ async function deleteWateringEvent(id) {
     } catch (e) {
         alert('Failed to delete watering event.');
     }
+}
+
+async function fetchWeatherEmoji(lat, lon) {
+    try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code&timezone=auto&forecast_days=1`);
+        const data = await res.json();
+        const code = data?.current?.weather_code;
+        return WEATHER_EMOJIS[code] ?? '🌤️';
+    } catch {
+        return '🌤️';
+    }
+}
+
+async function reverseGeocode(lat, lon) {
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        const a = data.address;
+        return [a.city || a.town || a.village || a.county, a.country].filter(Boolean).join(', ');
+    } catch {
+        return null;
+    }
+}
+
+async function loadLocation() {
+    const data = await apiFetch('/settings/location');
+    document.getElementById('location-lat').value = data.latitude;
+    document.getElementById('location-lon').value = data.longitude;
+    const [name, emoji] = await Promise.all([
+        reverseGeocode(data.latitude, data.longitude),
+        fetchWeatherEmoji(data.latitude, data.longitude),
+    ]);
+    document.getElementById('location-display').textContent =
+        name ? `${name} (${data.latitude}, ${data.longitude})` : `${data.latitude}, ${data.longitude}`;
+    document.getElementById('weather-icon').textContent = emoji;
+    const btn = document.getElementById('location-edit-btn');
+    if (data.confirmed) {
+        btn.textContent = 'Edit';
+        btn.onclick = toggleLocationEdit;
+    } else {
+        btn.textContent = 'Confirm location';
+        btn.onclick = confirmLocation;
+    }
+}
+
+async function confirmLocation() {
+    const lat = parseFloat(document.getElementById('location-lat').value);
+    const lon = parseFloat(document.getElementById('location-lon').value);
+    await apiFetch('/settings/location', {
+        method: 'POST',
+        body: JSON.stringify({ latitude: lat, longitude: lon })
+    });
+    document.getElementById('location-edit-btn').textContent = 'Edit';
+    document.getElementById('location-edit-btn').onclick = toggleLocationEdit;
+}
+
+let locationMap = null;
+let locationMarker = null;
+
+function toggleLocationEdit() {
+    const form = document.getElementById('location-form');
+    const btn = document.getElementById('location-edit-btn');
+    const visible = form.style.display !== 'none';
+    form.style.display = visible ? 'none' : 'block';
+    btn.textContent = visible ? 'Edit' : 'Cancel';
+    if (!visible) {
+        const lat = parseFloat(document.getElementById('location-lat').value);
+        const lon = parseFloat(document.getElementById('location-lon').value);
+        initLocationMap(lat, lon);
+    }
+}
+
+function initLocationMap(lat, lon) {
+    if (locationMap) {
+        locationMap.setView([lat, lon], 10);
+        locationMarker.setLatLng([lat, lon]);
+        locationMap.invalidateSize();
+        return;
+    }
+    locationMap = L.map('location-map').setView([lat, lon], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(locationMap);
+    locationMarker = L.marker([lat, lon], { draggable: true }).addTo(locationMap);
+    locationMarker.on('dragend', () => {
+        const pos = locationMarker.getLatLng();
+        document.getElementById('location-lat').value = pos.lat.toFixed(5);
+        document.getElementById('location-lon').value = pos.lng.toFixed(5);
+    });
+    locationMap.on('click', (e) => {
+        locationMarker.setLatLng(e.latlng);
+        document.getElementById('location-lat').value = e.latlng.lat.toFixed(5);
+        document.getElementById('location-lon').value = e.latlng.lng.toFixed(5);
+    });
+}
+
+async function searchLocation() {
+    const query = document.getElementById('location-search').value.trim();
+    const errorEl = document.getElementById('location-search-error');
+    if (!query) return;
+    errorEl.style.display = 'none';
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+        const results = await res.json();
+        if (!results.length) { errorEl.style.display = 'block'; return; }
+        const lat = parseFloat(results[0].lat);
+        const lon = parseFloat(results[0].lon);
+        document.getElementById('location-lat').value = lat.toFixed(5);
+        document.getElementById('location-lon').value = lon.toFixed(5);
+        if (locationMap && locationMarker) {
+            locationMarker.setLatLng([lat, lon]);
+            locationMap.setView([lat, lon], 10);
+        }
+    } catch {
+        errorEl.style.display = 'block';
+    }
+}
+
+async function saveLocation() {
+    const lat = parseFloat(document.getElementById('location-lat').value);
+    const lon = parseFloat(document.getElementById('location-lon').value);
+    if (isNaN(lat) || isNaN(lon)) return;
+    const data = await apiFetch('/settings/location', {
+        method: 'POST',
+        body: JSON.stringify({ latitude: lat, longitude: lon })
+    });
+    const name = await reverseGeocode(data.latitude, data.longitude);
+    document.getElementById('location-display').textContent =
+        name ? `${name} (${data.latitude}, ${data.longitude})` : `${data.latitude}, ${data.longitude}`;
+    toggleLocationEdit();
 }
 
 function populatePlantDropdown() {

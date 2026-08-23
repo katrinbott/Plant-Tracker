@@ -15,6 +15,7 @@ A Spring Boot app for tracking houseplants, their watering history, and photos, 
 - Upload multiple photos per plant with optional notes
 - Photo gallery with thumbnails, lightbox, and delete per image
 - Record watering events with amount and notes; weather data (temperature, humidity, weather code) is fetched automatically via Open-Meteo
+- Configurable weather location with city search, interactive map picker, and reverse geocoding — persisted in the database
 - Per-plant history with watering chart, temperature chart, and photo slideshow
 - QR codes per plant — scan to open a quick-watering page on your phone
 - Docker Compose setup for local development
@@ -107,3 +108,20 @@ Response:
   "daysSinceLastWatering": 6
 }
 ```
+
+### Settings
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/settings/location` | Get current weather location |
+| `POST` | `/settings/location` | Update weather location |
+
+`POST /settings/location` body:
+```json
+{
+  "latitude": 49.01423,
+  "longitude": 8.35258
+}
+```
+
+The location is persisted in the database and used to fetch weather data when recording a watering. Falls back to `LATITUDE`/`LONGITUDE` environment variables (defaulting to Berlin) if not yet saved.

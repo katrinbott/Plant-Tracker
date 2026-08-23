@@ -27,6 +27,12 @@ CREATE TABLE IF NOT EXISTS watering_events (
 CREATE INDEX IF NOT EXISTS idx_watering_events_plant_id ON watering_events(plant_id);
 CREATE INDEX IF NOT EXISTS idx_watering_events_watered_at ON watering_events(watered_at);
 
+CREATE TABLE IF NOT EXISTS app_settings (
+    id INTEGER PRIMARY KEY,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL
+);
+
 ALTER TABLE plant_images ADD COLUMN IF NOT EXISTS note TEXT;
 
 ALTER TABLE watering_events ADD COLUMN IF NOT EXISTS temperature_c REAL;

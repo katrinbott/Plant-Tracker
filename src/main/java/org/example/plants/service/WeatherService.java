@@ -1,9 +1,13 @@
 package org.example.plants.service;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.example.plants.model.AppSettings;
+import org.example.plants.repository.AppSettingsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -20,9 +24,30 @@ public class WeatherService {
     private double longitude;
 
     private final RestClient restClient;
+    private final AppSettingsRepository appSettingsRepository;
 
-    public WeatherService(RestClient.Builder restClientBuilder) {
+    public WeatherService(RestClient.Builder restClientBuilder, AppSettingsRepository appSettingsRepository) {
         this.restClient = restClientBuilder.build();
+        this.appSettingsRepository = appSettingsRepository;
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    void loadLocationFromDb() {
+        appSettingsRepository.findById(1).ifPresent(s -> {
+            latitude = s.getLatitude();
+            longitude = s.getLongitude();
+        });
+    }
+
+    public double getLatitude() { return latitude; }
+    public double getLongitude() { return longitude; }
+    public void setLocation(double latitude, double longitude) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+        AppSettings settings = appSettingsRepository.findById(1).orElse(new AppSettings(latitude, longitude));
+        settings.setLatitude(latitude);
+        settings.setLongitude(longitude);
+        appSettingsRepository.save(settings);
     }
 
     public WeatherData fetchCurrent() {
