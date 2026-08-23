@@ -101,6 +101,37 @@
         }
         .qr-btn:hover { background: #f0f8f0; }
 
+        #lightbox {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+        #lightbox img {
+            max-width: 90vw;
+            max-height: 85vh;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+        #lightbox-close {
+            position: fixed; top: 1rem; right: 1rem;
+            background: none; border: none; color: white;
+            font-size: 2rem; cursor: pointer; line-height: 1;
+        }
+        #lightbox-counter {
+            position: fixed; bottom: 1rem; left: 50%;
+            transform: translateX(-50%);
+            color: white; font-size: 0.9rem;
+        }
+        .lightbox-nav {
+            background: none; border: none; color: white;
+            font-size: 2rem; cursor: pointer; padding: 0.5rem;
+            flex-shrink: 0;
+        }
+
     </style>
 </head>
 <body>
@@ -141,6 +172,7 @@
                 <select id="history-plant" onchange="loadHistory()" style="display:block; width:100%; margin-top:0.25rem; padding:0.5rem; border:1px solid #ccc; border-radius:4px; font-size:1rem;"></select>
             </label>
         </div>
+        <div id="history-plant-image" style="margin-bottom:1.5rem;"></div>
         <div id="history-stats" style="display:none; gap:0.75rem; margin-bottom:1.5rem;"></div>
         <div id="history-chart-container" style="display:none; background:white; padding:1rem; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); margin-bottom:1.5rem;">
             <canvas id="history-chart"></canvas>
@@ -149,6 +181,14 @@
             <canvas id="temperature-chart"></canvas>
         </div>
         <div class="list" id="history-list"></div>
+    </div>
+
+    <div id="lightbox" onclick="closeLightbox()">
+        <button id="lightbox-prev" class="lightbox-nav" onclick="event.stopPropagation(); lightboxPrev()">‹</button>
+        <img id="lightbox-img" src="" onclick="event.stopPropagation()">
+        <button id="lightbox-next" class="lightbox-nav" onclick="event.stopPropagation(); lightboxNext()">›</button>
+        <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+        <div id="lightbox-counter"></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>

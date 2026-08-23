@@ -1,6 +1,6 @@
 # Plant Tracker
 
-A Spring Boot REST API for tracking houseplants and their watering history, with a small analytics layer and a browser-based frontend.
+A Spring Boot app for tracking houseplants, their watering history, and photos, with a browser-based frontend.
 
 ## Tech stack
 
@@ -8,6 +8,17 @@ A Spring Boot REST API for tracking houseplants and their watering history, with
 - PostgreSQL
 - Spring Data JPA
 - Maven
+
+## Features
+
+- Add and delete plants
+- Upload multiple photos per plant with optional notes
+- Photo gallery with thumbnails, lightbox, and delete per image
+- Record watering events with amount and notes; weather data (temperature, humidity, weather code) is fetched automatically via Open-Meteo
+- Per-plant history with watering chart, temperature chart, and photo slideshow
+- QR codes per plant — scan to open a quick-watering page on your phone
+- Docker Compose setup for local development
+- CI pipeline via GitHub Actions; deployment to Azure Container Apps
 
 ## Prerequisites
 
@@ -32,9 +43,16 @@ A Spring Boot REST API for tracking houseplants and their watering history, with
    mvn spring-boot:run
    ```
 
-The schema is created automatically on first start. Sample data (two plants + watering events) is loaded on every startup via `data.sql`.
+The schema is created automatically on first start.
 
 The frontend is available at `http://localhost:8080`.
+
+## Docker
+
+```bash
+cp .env.example .env  # fill in DB_USERNAME and DB_PASSWORD
+docker compose up --build
+```
 
 ## API
 

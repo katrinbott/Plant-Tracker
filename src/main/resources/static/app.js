@@ -1,4 +1,5 @@
 let plants = [];
+let imagesByPlantId = {};
 
 const WEATHER_CODES = {
     0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
@@ -43,20 +44,60 @@ async function loadPlants() {
     const list = document.getElementById('plant-list');
     try {
         plants = await apiFetch('/plants');
-        list.innerHTML = plants.length === 0
-            ? '<p class="empty">No plants yet.</p>'
-            : plants.map(p => `
-                <div class="card">
-                    <div class="card-info">
-                        <strong>${p.name}</strong>
-                        <span>${[p.species, p.location].filter(Boolean).join(' · ')}</span>
-                    </div>
-                  <div style="display:flex; gap:0.5rem; align-items:center;">
-                      <a href="/plants/${p.id}/qr" target="_blank" class="qr-btn" title="QR Code">QR</a>
-                      <button class="delete-btn" onclick="deletePlant(${p.id})" title="Delete">✕</button>
-                  </div>
+        if (plants.length === 0) {
+            list.innerHTML = '<p class="empty">No plants yet.</p>';
+            return;
+        }
+        const imagesByPlant = await Promise.all(
+            plants.map(p => apiFetch(`/plants/${p.id}/images`))
+        );
+        plants.forEach((p, i) => { imagesByPlantId[p.id] = imagesByPlant[i]; });
+        list.innerHTML = plants.map((p, i) => {
+            const images = imagesByPlant[i];
+            const thumbnails = images.map(img => `
+                <div style="position:relative; flex-shrink:0;">
+                    <img src="/plants/${p.id}/images/${img.id}"
+                         onclick="openLightbox(${p.id}, ${img.id})"
+                         style="width:64px; height:64px; object-fit:cover; border-radius:6px; cursor:pointer;">
+                    <button onclick="deletePlantImage(${p.id}, ${img.id})" title="Delete photo"
+                        style="position:absolute; top:-6px; right:-6px; background:#c0392b; color:white;
+                               border:none; border-radius:50%; width:18px; height:18px; font-size:10px;
+                               cursor:pointer; line-height:18px; padding:0;">✕</button>
                 </div>
             `).join('');
+            return `
+                <div class="card" style="flex-direction:column; align-items:stretch; gap:0.75rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div class="card-info">
+                            <strong>${p.name}</strong>
+                            <span>${[p.species, p.location].filter(Boolean).join(' · ')}</span>
+                        </div>
+                        <div style="display:flex; gap:0.5rem; align-items:center;">
+                            <label class="qr-btn" title="Upload photo" style="cursor:pointer;">
+                                📷<input type="file" accept="image/*" style="display:none;"
+                                    onchange="uploadPlantImage(${p.id}, this)">
+                            </label>
+                            <a href="/plants/${p.id}/qr" target="_blank" class="qr-btn" title="QR Code">QR</a>
+                            <button class="delete-btn" onclick="deletePlant(${p.id})" title="Delete plant">✕</button>
+                        </div>
+                    </div>
+                    ${images.length > 0 ? `
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            ${thumbnails}
+                        </div>` : ''}
+                    <div id="upload-note-${p.id}" style="display:none;">
+                        <input type="text" id="upload-note-input-${p.id}" placeholder="Optional note (e.g. chopped back due to pests)"
+                               style="width:100%; margin-bottom:0.5rem; padding:0.4rem; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;">
+                        <div style="display:flex; gap:0.5rem;">
+                            <button onclick="submitUpload(${p.id})"
+                                style="padding:0.4rem 1rem; background:#2d6a2d; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.9rem;">Upload</button>
+                            <button onclick="cancelUpload(${p.id})"
+                                style="padding:0.4rem 1rem; background:#eee; color:#333; border:none; border-radius:4px; cursor:pointer; font-size:0.9rem;">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     } catch (e) {
         list.innerHTML = '<p class="error">Failed to load plants.</p>';
     }
@@ -88,6 +129,121 @@ async function deletePlant(id) {
         alert('Failed to delete plant.');
     }
 }
+
+const pendingUploads = {};
+
+function uploadPlantImage(id, input) {
+    const file = input.files[0];
+    if (!file) return;
+    pendingUploads[id] = file;
+    const noteSection = document.getElementById(`upload-note-${id}`);
+    if (noteSection) noteSection.style.display = 'block';
+}
+
+async function submitUpload(id) {
+    const file = pendingUploads[id];
+    if (!file) return;
+    const noteInput = document.getElementById(`upload-note-input-${id}`);
+    const note = noteInput ? noteInput.value.trim() : '';
+    const formData = new FormData();
+    formData.append('file', file);
+    if (note) formData.append('note', note);
+    await fetch(`/plants/${id}/images`, { method: 'POST', body: formData });
+    delete pendingUploads[id];
+    await loadPlants();
+}
+
+function cancelUpload(id) {
+    delete pendingUploads[id];
+    const noteSection = document.getElementById(`upload-note-${id}`);
+    if (noteSection) noteSection.style.display = 'none';
+}
+
+async function deletePlantImage(plantId, imageId) {
+    await apiFetch(`/plants/${plantId}/images/${imageId}`, { method: 'DELETE' });
+    await loadPlants();
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+
+let lightbox = { plantId: null, images: [], index: 0 };
+
+function openLightbox(plantId, imageId) {
+    const images = imagesByPlantId[plantId] ?? [];
+    const index = images.findIndex(img => img.id === imageId);
+    lightbox = { plantId, images, index: index >= 0 ? index : 0 };
+    renderLightbox();
+    document.getElementById('lightbox').style.display = 'flex';
+    document.addEventListener('keydown', lightboxKeyHandler);
+}
+
+function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+    document.removeEventListener('keydown', lightboxKeyHandler);
+}
+
+function lightboxKeyHandler(e) {
+    if (e.key === 'ArrowLeft') lightboxPrev();
+    else if (e.key === 'ArrowRight') lightboxNext();
+    else if (e.key === 'Escape') closeLightbox();
+}
+
+function lightboxPrev() { if (lightbox.index > 0) { lightbox.index--; renderLightbox(); } }
+function lightboxNext() { if (lightbox.index < lightbox.images.length - 1) { lightbox.index++; renderLightbox(); } }
+
+function renderLightbox() {
+    const img = lightbox.images[lightbox.index];
+    document.getElementById('lightbox-img').src = `/plants/${lightbox.plantId}/images/${img.id}`;
+    const counter = document.getElementById('lightbox-counter');
+    counter.textContent = lightbox.images.length > 1 ? `${lightbox.index + 1} / ${lightbox.images.length}` : '';
+    document.getElementById('lightbox-prev').style.visibility =
+        lightbox.index > 0 ? 'visible' : 'hidden';
+    document.getElementById('lightbox-next').style.visibility =
+        lightbox.index < lightbox.images.length - 1 ? 'visible' : 'hidden';
+}
+
+// ── History slideshow ─────────────────────────────────────────────────────────
+
+let slideshow = { plantId: null, images: [], index: 0 };
+
+function renderSlideshow() {
+    const container = document.getElementById('history-plant-image');
+    if (slideshow.images.length === 0) { container.innerHTML = ''; return; }
+    const img = slideshow.images[slideshow.index];
+    container.innerHTML = `
+        <div style="background:white; border-radius:8px; overflow:hidden;
+                    box-shadow:0 1px 3px rgba(0,0,0,0.1); margin-bottom:1rem;">
+            <div style="text-align:right; padding:0.4rem 0.75rem; font-size:0.8rem; color:#999; border-bottom:1px solid #f0f0f0;">
+                ${new Date(img.createdAt).toLocaleString()}
+            </div>
+            <div style="position:relative;">
+                <img src="/plants/${slideshow.plantId}/images/${img.id}"
+                     style="width:100%; max-height:300px; object-fit:contain; display:block;">
+                ${slideshow.images.length > 1 ? `
+                    <button onclick="slideshowPrev()" style="position:absolute; left:0.5rem; top:50%;
+                        transform:translateY(-50%); background:rgba(0,0,0,0.4); color:white; border:none;
+                        border-radius:50%; width:2rem; height:2rem; font-size:1.2rem; cursor:pointer;
+                        visibility:${slideshow.index > 0 ? 'visible' : 'hidden'};">‹</button>
+                    <button onclick="slideshowNext()" style="position:absolute; right:0.5rem; top:50%;
+                        transform:translateY(-50%); background:rgba(0,0,0,0.4); color:white; border:none;
+                        border-radius:50%; width:2rem; height:2rem; font-size:1.2rem; cursor:pointer;
+                        visibility:${slideshow.index < slideshow.images.length - 1 ? 'visible' : 'hidden'};">›</button>
+                    <div style="position:absolute; bottom:0.5rem; right:0.75rem; color:white;
+                                font-size:0.8rem; background:rgba(0,0,0,0.4); padding:0.1rem 0.4rem; border-radius:4px;">
+                        ${slideshow.index + 1} / ${slideshow.images.length}
+                    </div>
+                ` : ''}
+            </div>
+            ${img.note ? `
+            <div style="padding:0.5rem 0.75rem; border-top:1px solid #f0f0f0; font-size:0.9rem; color:#555;">
+                ${img.note}
+            </div>` : ''}
+        </div>
+    `;
+}
+
+function slideshowPrev() { if (slideshow.index > 0) { slideshow.index--; renderSlideshow(); } }
+function slideshowNext() { if (slideshow.index < slideshow.images.length - 1) { slideshow.index++; renderSlideshow(); } }
 
 // ── Watering ──────────────────────────────────────────────────────────────────
 
@@ -175,6 +331,12 @@ async function loadHistory() {
     const statsContainer = document.getElementById('history-stats');
     const plantId = document.getElementById('history-plant').value;
     if (!plantId) return;
+
+    const plant = plants.find(p => p.id == plantId);
+    const imageContainer = document.getElementById('history-plant-image');
+    const images = plant ? await apiFetch(`/plants/${plant.id}/images`) : [];
+    slideshow = { plantId: plant?.id ?? null, images, index: 0 };
+    renderSlideshow();
     try {
         const [events, analytics] = await Promise.all([
             apiFetch(`/watering/plant/${plantId}`),
