@@ -43,8 +43,9 @@ class AnalyticsServiceTest {
 
     @Test
     void oneEvent_returnsNullAverageAndCorrectDaysSinceLast() {
+        LocalDateTime now = LocalDateTime.now();
         when(wateringEventRepository.findByPlant_IdOrderByWateredAtDesc(1L))
-                .thenReturn(List.of(eventAt(LocalDateTime.now().minusDays(3))));
+                .thenReturn(List.of(eventAt(now.minusDays(3))));
 
         PlantAnalytics result = analyticsService.getAnalyticsForPlant(1L);
 
@@ -55,10 +56,10 @@ class AnalyticsServiceTest {
 
     @Test
     void twoEvents_calculatesCorrectAverage() {
-        // newest first — gap is 7 days
+        LocalDateTime now = LocalDateTime.now();
         when(wateringEventRepository.findByPlant_IdOrderByWateredAtDesc(1L)).thenReturn(List.of(
-                eventAt(LocalDateTime.now().minusDays(2)),
-                eventAt(LocalDateTime.now().minusDays(9))
+                eventAt(now.minusDays(2)),
+                eventAt(now.minusDays(9))
         ));
 
         PlantAnalytics result = analyticsService.getAnalyticsForPlant(1L);
@@ -70,11 +71,12 @@ class AnalyticsServiceTest {
 
     @Test
     void multipleEvents_averagesGapsCorrectly() {
+        LocalDateTime now = LocalDateTime.now();
         // gaps: 3 days + 7 days → average 5.0
         when(wateringEventRepository.findByPlant_IdOrderByWateredAtDesc(1L)).thenReturn(List.of(
-                eventAt(LocalDateTime.now().minusDays(1)),
-                eventAt(LocalDateTime.now().minusDays(4)),
-                eventAt(LocalDateTime.now().minusDays(11))
+                eventAt(now.minusDays(1)),
+                eventAt(now.minusDays(4)),
+                eventAt(now.minusDays(11))
         ));
 
         PlantAnalytics result = analyticsService.getAnalyticsForPlant(1L);
