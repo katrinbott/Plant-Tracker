@@ -76,6 +76,8 @@
         .card-info span { font-size: 0.85rem; color: #666; }
 
         .delete-btn {
+            display: inline-flex;
+            align-items: center;
             background: none;
             border: none;
             color: #c0392b;
@@ -90,16 +92,23 @@
         .empty { color: #888; font-style: italic; }
 
         .qr-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            align-self: center;
+            margin: 0;
             color: #2d6a2d;
             font-size: 0.8rem;
             font-weight: bold;
             text-decoration: none;
-            padding: 0.2rem 0.5rem;
+            height: 1.6rem;
+            padding: 0 0.5rem;
             border: 1px solid #2d6a2d;
             border-radius: 4px;
             flex-shrink: 0;
         }
         .qr-btn:hover { background: #f0f8f0; }
+        .camera-btn { padding-bottom: 0.3rem; }
 
         #lightbox {
             display: none;

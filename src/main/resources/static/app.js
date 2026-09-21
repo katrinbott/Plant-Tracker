@@ -84,7 +84,7 @@ async function loadPlants() {
                             <span>${[p.species, p.location].filter(Boolean).join(' · ')}</span>
                         </div>
                         <div style="display:flex; gap:0.5rem; align-items:center;">
-                            <label class="qr-btn" title="Upload photo" style="cursor:pointer;">
+                            <label class="qr-btn camera-btn" title="Upload photo" style="cursor:pointer;">
                                 📷<input type="file" accept="image/*" style="display:none;"
                                     onchange="uploadPlantImage(${p.id}, this)">
                             </label>
