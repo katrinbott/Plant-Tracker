@@ -5,7 +5,7 @@ import org.example.plants.model.WateringEvent;
 import org.example.plants.repository.WateringEventRepository;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -25,7 +25,7 @@ public class AnalyticsService {
             return new PlantAnalytics(0, null, null);
         }
 
-        long daysSinceLast = ChronoUnit.DAYS.between(wateringEvents.get(0).getWateredAt(), LocalDateTime.now());
+        long daysSinceLast = ChronoUnit.DAYS.between(wateringEvents.get(0).getWateredAt().toLocalDate(), LocalDate.now());
 
         if (wateringEvents.size() < 2) {
             return new PlantAnalytics(1, null, daysSinceLast);
