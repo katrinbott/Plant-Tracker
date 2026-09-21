@@ -33,7 +33,7 @@ public class AnalyticsService {
 
         double totalDays = 0;
         for (int i = 0; i < wateringEvents.size() - 1; i++) {
-            totalDays += ChronoUnit.DAYS.between(wateringEvents.get(i + 1).getWateredAt(), wateringEvents.get(i).getWateredAt());
+            totalDays += ChronoUnit.DAYS.between(wateringEvents.get(i + 1).getWateredAt().toLocalDate(), wateringEvents.get(i).getWateredAt().toLocalDate());
         }
         double average = totalDays / (wateringEvents.size() - 1);
 
