@@ -27,6 +27,7 @@ public class PlantImage {
     }
 
     public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     public Long getPlantId() { return plantId; }
     public void setPlantId(Long plantId) { this.plantId = plantId; }
     public String getImagePath() { return imagePath; }
