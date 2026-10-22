@@ -14,7 +14,7 @@ A Spring Boot app for tracking houseplants, their watering history, and photos, 
 - Add and delete plants; edit a plant's location from the Analytics tab
 - Upload multiple photos per plant with optional notes
 - Photo gallery with thumbnails, lightbox, and delete per image
-- Record watering events with amount and notes; weather data (temperature, humidity, weather code) is fetched automatically via Open-Meteo
+- Record watering events with amount, notes, and whether fertilizer was used; weather data (temperature, humidity, weather code) is fetched automatically via Open-Meteo
 - Configurable weather location with city search, interactive map picker, and reverse geocoding — persisted in the database
 - Per-plant analytics tab with watering stats, watering chart, temperature chart, photo slideshow, and watering history
 - The selected plant on the Watering and Analytics tabs is remembered separately and survives page reloads (stored in the browser's `localStorage`)
@@ -99,10 +99,12 @@ Returns the updated plant, or `404` if the plant doesn't exist. A blank `locatio
 {
   "plantId": 1,
   "amountMl": 200,
-  "note": "Soil was dry"
+  "note": "Soil was dry",
+  "fertilizer": true
 }
 ```
 `plantId` is required; `amountMl` must be positive if provided; `note` is optional.
+`fertilizer` records whether fertilizer was used and defaults to `false` when omitted.
 
 ### Analytics
 

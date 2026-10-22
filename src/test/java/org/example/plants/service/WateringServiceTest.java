@@ -29,7 +29,7 @@ class WateringServiceTest {
     void recordWatering_throwsWhenPlantNotFound() {
         when(plantRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> wateringService.recordWatering(99L, 200, "note"))
+        assertThatThrownBy(() -> wateringService.recordWatering(99L, 200, "note", false))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Plant not found");
     }
@@ -41,7 +41,7 @@ class WateringServiceTest {
                 new WeatherService.WeatherData(20.5, 65.0, 1, 15.0, 25.0));
         when(wateringEventRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        WateringEvent result = wateringService.recordWatering(1L, 200, "looked dry");
+        WateringEvent result = wateringService.recordWatering(1L, 200, "looked dry", false);
 
         assertThat(result.getTemperatureC()).isEqualTo(20.5);
         assertThat(result.getHumidityPercent()).isEqualTo(65.0);
@@ -58,11 +58,33 @@ class WateringServiceTest {
         when(weatherService.fetchCurrent()).thenReturn(null);
         when(wateringEventRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        WateringEvent result = wateringService.recordWatering(1L, 100, null);
+        WateringEvent result = wateringService.recordWatering(1L, 100, null, false);
 
         assertThat(result.getTemperatureC()).isNull();
         assertThat(result.getAmountMl()).isEqualTo(100);
         verify(wateringEventRepository).save(any());
+    }
+
+    @Test
+    void recordWatering_savesFertilizerFlagWhenSet() {
+        when(plantRepository.findById(1L)).thenReturn(Optional.of(new Plant()));
+        when(weatherService.fetchCurrent()).thenReturn(null);
+        when(wateringEventRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        WateringEvent result = wateringService.recordWatering(1L, 200, null, true);
+
+        assertThat(result.isFertilizer()).isTrue();
+    }
+
+    @Test
+    void recordWatering_defaultsFertilizerToFalse() {
+        when(plantRepository.findById(1L)).thenReturn(Optional.of(new Plant()));
+        when(weatherService.fetchCurrent()).thenReturn(null);
+        when(wateringEventRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        WateringEvent result = wateringService.recordWatering(1L, 200, null, false);
+
+        assertThat(result.isFertilizer()).isFalse();
     }
 
     @Test

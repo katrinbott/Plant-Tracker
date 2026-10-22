@@ -168,6 +168,10 @@
             <label>Plant* <select id="watering-plant" required onchange="selectWateringPlant(this.value)"></select></label>
             <label>Amount (ml) <input type="number" id="watering-amount" min="1" placeholder="e.g. 200"></label>
             <label>Note <input type="text" id="watering-note" placeholder="e.g. looked dry"></label>
+            <label style="display:flex; align-items:center; gap:0.5rem;">
+                <input type="checkbox" id="watering-fertilizer" style="display:inline-block; width:auto; margin-top:0;">
+                Used fertilizer
+            </label>
             <button type="submit">Record Watering</button>
             <div class="error" id="watering-error"></div>
         </form>

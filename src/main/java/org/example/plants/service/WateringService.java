@@ -27,7 +27,7 @@ public class WateringService {
         this.weatherService = weatherService;
     }
 
-    public WateringEvent recordWatering(Long plantId, Integer amountMl, String note) {
+    public WateringEvent recordWatering(Long plantId, Integer amountMl, String note, boolean fertilizer) {
         Plant plant = plantRepository.findById(plantId)
                 .orElseThrow(() -> new RuntimeException("Plant not found"));
 
@@ -36,6 +36,7 @@ public class WateringService {
         wateringEvent.setWateredAt(LocalDateTime.now());
         wateringEvent.setAmountMl(amountMl);
         wateringEvent.setNote(note);
+        wateringEvent.setFertilizer(fertilizer);
 
         WeatherService.WeatherData weather = weatherService.fetchCurrent();
 

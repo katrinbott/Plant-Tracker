@@ -35,7 +35,7 @@ class WateringControllerTest {
 
     @Test
     void recordWatering_returns201WithBody() throws Exception {
-        when(wateringService.recordWatering(1L, 200, "looked dry")).thenReturn(event(1L, 200, "looked dry"));
+        when(wateringService.recordWatering(1L, 200, "looked dry", false)).thenReturn(event(1L, 200, "looked dry"));
 
         mockMvc.perform(post("/watering")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -43,6 +43,34 @@ class WateringControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.amountMl").value(200))
                 .andExpect(jsonPath("$.note").value("looked dry"));
+    }
+
+    @Test
+    void recordWatering_passesFertilizerFlagAndReturnsItInBody() throws Exception {
+        WateringEvent fertilized = event(1L, 200, null);
+        fertilized.setFertilizer(true);
+        when(wateringService.recordWatering(1L, 200, null, true)).thenReturn(fertilized);
+
+        mockMvc.perform(post("/watering")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"plantId\": 1, \"amountMl\": 200, \"fertilizer\": true}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.fertilizer").value(true));
+
+        verify(wateringService).recordWatering(1L, 200, null, true);
+    }
+
+    @Test
+    void recordWatering_defaultsFertilizerToFalseWhenOmitted() throws Exception {
+        when(wateringService.recordWatering(1L, 200, null, false)).thenReturn(event(1L, 200, null));
+
+        mockMvc.perform(post("/watering")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"plantId\": 1, \"amountMl\": 200}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.fertilizer").value(false));
+
+        verify(wateringService).recordWatering(1L, 200, null, false);
     }
 
     @Test

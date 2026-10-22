@@ -23,7 +23,8 @@ public class WateringController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public WateringEvent recordWatering(@RequestBody @Valid WaterCreateRequest.WateringRequest wateringRequest) {
-        return wateringService.recordWatering(wateringRequest.plantId(), wateringRequest.amountMl(), wateringRequest.note());
+        return wateringService.recordWatering(wateringRequest.plantId(), wateringRequest.amountMl(),
+                wateringRequest.note(), wateringRequest.fertilizer());
     }
 
     @GetMapping

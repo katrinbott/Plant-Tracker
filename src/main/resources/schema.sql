@@ -40,3 +40,4 @@ ALTER TABLE watering_events ADD COLUMN IF NOT EXISTS humidity_percent REAL;
 ALTER TABLE watering_events ADD COLUMN IF NOT EXISTS weather_code INTEGER;
 ALTER TABLE watering_events ADD COLUMN IF NOT EXISTS min_temperature_c REAL;
 ALTER TABLE watering_events ADD COLUMN IF NOT EXISTS max_temperature_c REAL;
+ALTER TABLE watering_events ADD COLUMN IF NOT EXISTS fertilizer BOOLEAN NOT NULL DEFAULT FALSE;

@@ -68,6 +68,10 @@
         <form onsubmit="recordWatering(event)">
             <label>Amount (ml) <input type="number" id="amount" inputmode="numeric"></label>
             <label>Note        <input type="text"   id="note"></label>
+            <label style="display:flex; align-items:center; gap:0.5rem;">
+                <input type="checkbox" id="fertilizer" style="display:inline-block; width:auto; margin-top:0;">
+                Used fertilizer
+            </label>
             <button type="submit">Record Watering</button>
         </form>
 
@@ -93,6 +97,7 @@
                         plantId: parseInt(plantId),
                         amountMl: amountVal ? parseInt(amountVal) : null,
                         note: document.getElementById('note').value || null,
+                        fertilizer: document.getElementById('fertilizer').checked,
                     })
                 });
                 const msg = document.getElementById('message');

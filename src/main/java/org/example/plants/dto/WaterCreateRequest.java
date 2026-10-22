@@ -8,5 +8,6 @@ public class WaterCreateRequest {
     public record WateringRequest(
             @NotNull Long plantId,
             @Positive Integer amountMl,
-            String note) {}
+            String note,
+            boolean fertilizer) {}
 }

@@ -271,7 +271,7 @@ async function loadWateringEvents() {
                 const weather = e.minTemperatureC != null
                     ? `${e.minTemperatureC}°C / ${e.maxTemperatureC}°C  · ${WEATHER_CODES[e.weatherCode] ?? 'Unknown'}`
                     : null;
-                const details = [e.amountMl ? `${e.amountMl} ml` : null, e.note, weather].filter(Boolean).join(' · ');
+                const details = [e.amountMl ? `${e.amountMl} ml` : null, e.fertilizer ? 'fertilized' : null, e.note, weather].filter(Boolean).join(' · ');
                 return `
                     <div class="card">
                         <div class="card-info">
@@ -296,6 +296,7 @@ async function recordWatering(event) {
         plantId: parseInt(document.getElementById('watering-plant').value),
         amountMl: amountVal ? parseInt(amountVal) : null,
         note: document.getElementById('watering-note').value || null,
+        fertilizer: document.getElementById('watering-fertilizer').checked,
     };
     try {
         await apiFetch('/watering', { method: 'POST', body: JSON.stringify(body) });
@@ -529,7 +530,7 @@ async function loadAnalytics() {
 
         list.innerHTML = events.map(e => {
             const date = new Date(e.wateredAt).toLocaleString();
-            const details = [e.amountMl ? `${e.amountMl} ml` : null, e.note].filter(Boolean).join(' · ');
+            const details = [e.amountMl ? `${e.amountMl} ml` : null, e.fertilizer ? 'fertilized' : null, e.note].filter(Boolean).join(' · ');
             return `
                 <div class="card">
                     <div class="card-info">

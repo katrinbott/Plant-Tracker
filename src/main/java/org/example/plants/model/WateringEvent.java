@@ -22,6 +22,9 @@ public class WateringEvent {
 
     private String note;
 
+    @Column(nullable = false)
+    private boolean fertilizer;
+
     @Column(name = "temperature_c")
     private Double temperatureC;
 
@@ -82,6 +85,15 @@ public class WateringEvent {
     public void setNote(String note) {
         this.note = note;
     }
+
+    public boolean isFertilizer() {
+        return fertilizer;
+    }
+
+    public void setFertilizer(boolean fertilizer) {
+        this.fertilizer = fertilizer;
+    }
+
     public Double getTemperatureC() { return temperatureC; }
 
     public void setTemperatureC(Double temperatureC) { this.temperatureC = temperatureC; }
