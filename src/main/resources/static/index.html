@@ -149,7 +149,7 @@
     <div class="tabs">
         <button class="tab active" data-tab="plants" onclick="showTab('plants')">Plants</button>
         <button class="tab" data-tab="watering" onclick="showTab('watering')">Watering</button>
-        <button class="tab" data-tab="history" onclick="showTab('history')">History</button>
+        <button class="tab" data-tab="analytics" onclick="showTab('analytics')">Analytics</button>
     </div>
 
     <div id="plants" class="section active">
@@ -165,7 +165,7 @@
 
     <div id="watering" class="section">
         <form onsubmit="recordWatering(event)">
-            <label>Plant* <select id="watering-plant" required></select></label>
+            <label>Plant* <select id="watering-plant" required onchange="selectWateringPlant(this.value)"></select></label>
             <label>Amount (ml) <input type="number" id="watering-amount" min="1" placeholder="e.g. 200"></label>
             <label>Note <input type="text" id="watering-note" placeholder="e.g. looked dry"></label>
             <button type="submit">Record Watering</button>
@@ -187,7 +187,7 @@
             <div id="location-display" style="font-size:1.1rem; font-weight:500; color:#333;"></div>
             <div id="location-form" style="display:none; margin-top:0.75rem;">
                 <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
-                    <input type="text" id="location-search" placeholder="Search city, e.g. Karlsruhe"
+                    <input type="text" id="location-search" placeholder="Search city, e.g. Hamburg"
                            style="flex:1; padding:0.4rem; border:1px solid #ccc; border-radius:4px; font-size:0.9rem;"
                            onkeydown="if(event.key==='Enter'){event.preventDefault();searchLocation();}">
                     <button onclick="searchLocation()"
@@ -219,15 +219,33 @@
         <div class="list" id="watering-list"></div>
     </div>
 
-    <div id="history" class="section">
+    <div id="analytics" class="section">
         <div style="margin-bottom: 1.5rem;">
             <label style="font-size: 0.9rem; color: #555;">
                 Plant
-                <select id="history-plant" onchange="loadHistory()" style="display:block; width:100%; margin-top:0.25rem; padding:0.5rem; border:1px solid #ccc; border-radius:4px; font-size:1rem;"></select>
+                <select id="analytics-plant"onchange="selectAnalyticsPlant(this.value)" style="display:block; width:100%; margin-top:0.25rem; padding:0.5rem; border:1px solid #ccc; border-radius:4px; font-size:1rem;"></select>
             </label>
         </div>
-        <div id="history-plant-image" style="margin-bottom:1.5rem;"></div>
-        <div id="history-stats" style="display:none; gap:0.75rem; margin-bottom:1.5rem;"></div>
+        <div id="plant-location-card" style="display:none; margin-bottom:1.5rem; background:white; padding:1rem; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size:0.8rem; color:#888;">Location</div>
+                    <div id="plant-location-display" style="font-size:1.05rem; font-weight:500; color:#333;"></div>
+                </div>
+                <button onclick="togglePlantLocationEdit()" id="plant-location-edit-btn"
+                    style="font-size:0.85rem; padding:0.3rem 0.75rem; border:1px solid #2d6a2d; border-radius:4px;
+                           background:white; color:#2d6a2d; cursor:pointer;">Edit</button>
+            </div>
+            <div id="plant-location-form" style="display:none; gap:0.5rem; margin-top:0.75rem;">
+                <input type="text" id="plant-location-input" placeholder="e.g. Living room"
+                       style="flex:1; margin-top:0; padding:0.4rem; font-size:0.9rem;"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();savePlantLocation();}">
+                <button onclick="savePlantLocation()"
+                    style="padding:0.4rem 1rem; background:#2d6a2d; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.9rem;">Save</button>
+            </div>
+        </div>
+        <div id="analytics-plant-image"style="margin-bottom:1.5rem;"></div>
+        <div id="analytics-stats"style="display:none; gap:0.75rem; margin-bottom:1.5rem;"></div>
         <div id="history-chart-container" style="display:none; background:white; padding:1rem; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); margin-bottom:1.5rem;">
             <canvas id="history-chart"></canvas>
         </div>

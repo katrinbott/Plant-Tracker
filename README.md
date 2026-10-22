@@ -11,12 +11,13 @@ A Spring Boot app for tracking houseplants, their watering history, and photos, 
 
 ## Features
 
-- Add and delete plants
+- Add and delete plants; edit a plant's location from the Analytics tab
 - Upload multiple photos per plant with optional notes
 - Photo gallery with thumbnails, lightbox, and delete per image
 - Record watering events with amount and notes; weather data (temperature, humidity, weather code) is fetched automatically via Open-Meteo
 - Configurable weather location with city search, interactive map picker, and reverse geocoding — persisted in the database
-- Per-plant history with watering chart, temperature chart, and photo slideshow
+- Per-plant analytics tab with watering stats, watering chart, temperature chart, photo slideshow, and watering history
+- The selected plant on the Watering and Analytics tabs is remembered separately and survives page reloads (stored in the browser's `localStorage`)
 - QR codes per plant — scan to open a quick-watering page on your phone
 - Docker Compose setup for local development
 - CI pipeline via GitHub Actions; deployment to Azure Container Apps
@@ -63,6 +64,7 @@ docker compose up --build
 |--------|------|-------------|
 | `GET` | `/plants` | List all plants |
 | `POST` | `/plants` | Create a plant |
+| `PATCH` | `/plants/{id}` | Update a plant's location |
 | `DELETE` | `/plants/{id}` | Delete a plant |
 
 `POST /plants` body:
@@ -74,6 +76,14 @@ docker compose up --build
 }
 ```
 `name` is required; `species` and `location` are optional.
+
+`PATCH /plants/{id}` body:
+```json
+{
+  "location": "Balcony"
+}
+```
+Returns the updated plant, or `404` if the plant doesn't exist. A blank `location` clears it.
 
 ### Watering events
 
@@ -119,8 +129,8 @@ Response:
 `POST /settings/location` body:
 ```json
 {
-  "latitude": 49.01423,
-  "longitude": 8.35258
+  "latitude": 53.5511,
+  "longitude": 9.9937
 }
 ```
 

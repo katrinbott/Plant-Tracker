@@ -43,9 +43,9 @@ function showTab(name) {
         loadWateringEvents();
         loadLocation();
     }
-    if (name === 'history') {
-        populateHistoryDropdown();
-        loadHistory();
+    if (name === 'analytics') {
+        populateAnalyticsDropdown();
+        loadAnalytics();
     }
 }
 
@@ -213,12 +213,12 @@ function renderLightbox() {
         lightbox.index < lightbox.images.length - 1 ? 'visible' : 'hidden';
 }
 
-// ── History slideshow ─────────────────────────────────────────────────────────
+// ── Analytics slideshow ───────────────────────────────────────────────────────
 
 let slideshow = { plantId: null, images: [], index: 0 };
 
 function renderSlideshow() {
-    const container = document.getElementById('history-plant-image');
+    const container = document.getElementById('analytics-plant-image');
     if (slideshow.images.length === 0) { container.innerHTML = ''; return; }
     const img = slideshow.images[slideshow.index];
     container.innerHTML = `
@@ -447,35 +447,60 @@ async function saveLocation() {
     toggleLocationEdit();
 }
 
+function loadStored(key) {
+    try { return localStorage.getItem(key); } catch { return null; }
+}
+
+function store(key, value) {
+    try { localStorage.setItem(key, value); } catch { /* storage unavailable, keep in-memory only */ }
+}
+
+let selectedWateringPlantId = loadStored('wateringPlantId');
+let selectedAnalyticsPlantId = loadStored('analyticsPlantId');
+
+function selectWateringPlant(id) {
+    selectedWateringPlantId = id;
+    store('wateringPlantId', id);
+}
+
+function selectAnalyticsPlant(id) {
+    selectedAnalyticsPlantId = id;
+    store('analyticsPlantId', id);
+    loadAnalytics();
+}
+
 function populatePlantDropdown() {
     const select = document.getElementById('watering-plant');
     select.innerHTML = plants.length === 0
         ? '<option value="">No plants available</option>'
         : plants.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    if (plants.some(p => p.id == selectedWateringPlantId)) select.value = selectedWateringPlantId;
 }
 
-// ── History ───────────────────────────────────────────────────────────────────
+// ── Analytics ─────────────────────────────────────────────────────────────────
 
 let historyChart = null;
 let temperatureChart = null;
 
-function populateHistoryDropdown() {
-    const select = document.getElementById('history-plant');
+function populateAnalyticsDropdown() {
+    const select = document.getElementById('analytics-plant');
     select.innerHTML = plants.length === 0
         ? '<option value="">No plants available</option>'
         : plants.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    if (plants.some(p => p.id == selectedAnalyticsPlantId)) select.value = selectedAnalyticsPlantId;
 }
 
-async function loadHistory() {
+async function loadAnalytics() {
     const list = document.getElementById('history-list');
     const chartContainer = document.getElementById('history-chart-container');
     const tempChartContainer = document.getElementById('temperature-chart-container');
-    const statsContainer = document.getElementById('history-stats');
-    const plantId = document.getElementById('history-plant').value;
+    const statsContainer = document.getElementById('analytics-stats');
+    const plantId = document.getElementById('analytics-plant').value;
     if (!plantId) return;
 
     const plant = plants.find(p => p.id == plantId);
-    const imageContainer = document.getElementById('history-plant-image');
+    renderPlantLocation(plant);
+    const imageContainer = document.getElementById('analytics-plant-image');
     const images = plant ? await apiFetch(`/plants/${plant.id}/images`) : [];
     slideshow = { plantId: plant?.id ?? null, images, index: 0 };
     renderSlideshow();
@@ -515,7 +540,44 @@ async function loadHistory() {
             `;
         }).join('');
     } catch (e) {
-        list.innerHTML = '<p class="error">Failed to load history.</p>';
+        list.innerHTML = '<p class="error">Failed to load analytics.</p>';
+    }
+}
+
+function renderPlantLocation(plant) {
+    const card = document.getElementById('plant-location-card');
+    if (!plant) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    document.getElementById('plant-location-display').textContent = plant.location || 'No location set';
+    document.getElementById('plant-location-form').style.display = 'none';
+    document.getElementById('plant-location-edit-btn').textContent = 'Edit';
+}
+
+function togglePlantLocationEdit() {
+    const form = document.getElementById('plant-location-form');
+    const editing = form.style.display === 'none';
+    form.style.display = editing ? 'flex' : 'none';
+    document.getElementById('plant-location-edit-btn').textContent = editing ? 'Cancel' : 'Edit';
+    if (editing) {
+        const plant = plants.find(p => p.id == document.getElementById('analytics-plant').value);
+        const input = document.getElementById('plant-location-input');
+        input.value = plant?.location ?? '';
+        input.focus();
+    }
+}
+
+async function savePlantLocation() {
+    const plantId = document.getElementById('analytics-plant').value;
+    const location = document.getElementById('plant-location-input').value;
+    try {
+        const updated = await apiFetch(`/plants/${plantId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ location })
+        });
+        await loadPlants();
+        renderPlantLocation(updated);
+    } catch (e) {
+        alert('Failed to update location.');
     }
 }
 
