@@ -18,6 +18,8 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -44,7 +46,7 @@ class PlantControllerTest {
 
         mockMvc.perform(post("/plants")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\": \"Monstera\", \"species\": \"Monstera deliciosa\"}"))
+                        .content("{\"name\": \"Monstera\", \"species\": \"Monstera deliciosa\", \"roomId\": 2}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Monstera"))
                 .andExpect(jsonPath("$.species").value("Monstera deliciosa"));
@@ -54,7 +56,25 @@ class PlantControllerTest {
     void createPlant_returns400WhenNameIsBlank() throws Exception {
         mockMvc.perform(post("/plants")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\": \"\"}"))
+                        .content("{\"name\": \"\", \"roomId\": 2}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createPlant_returns400WhenRoomIdMissing() throws Exception {
+        mockMvc.perform(post("/plants")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"Monstera\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createPlant_returns400WhenRoomDoesNotExist() throws Exception {
+        when(plantService.createPlant(any())).thenReturn(null);
+
+        mockMvc.perform(post("/plants")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"Monstera\", \"roomId\": 99}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -90,6 +110,39 @@ class PlantControllerTest {
         mockMvc.perform(patch("/plants/99")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"location\": \"Balcony\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void setRoom_returns200WithUpdatedPlant() throws Exception {
+        Plant plant = new Plant();
+        plant.setName("Fern");
+        when(plantService.setRoom(1L, 3L)).thenReturn(plant);
+
+        mockMvc.perform(put("/plants/1/room")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"roomId\": 3}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Fern"));
+    }
+
+    @Test
+    void setRoom_returns400WhenRoomIdIsNull() throws Exception {
+        mockMvc.perform(put("/plants/1/room")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"roomId\": null}"))
+                .andExpect(status().isBadRequest());
+
+        verify(plantService, never()).setRoom(any(), any());
+    }
+
+    @Test
+    void setRoom_returns404WhenPlantOrRoomNotFound() throws Exception {
+        when(plantService.setRoom(eq(99L), any())).thenReturn(null);
+
+        mockMvc.perform(put("/plants/99/room")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"roomId\": 3}"))
                 .andExpect(status().isNotFound());
     }
 

@@ -1,10 +1,20 @@
+CREATE TABLE IF NOT EXISTS rooms (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- location is the spot within the room, e.g. "windowsill". Every plant belongs to a
+-- room, so a room holding plants cannot be deleted until they have been moved.
 CREATE TABLE IF NOT EXISTS plants (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     species VARCHAR(100),
     location VARCHAR(100),
+    room_id BIGINT NOT NULL REFERENCES rooms(id) ON DELETE RESTRICT,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
+
+CREATE INDEX IF NOT EXISTS idx_plants_room_id ON plants(room_id);
 
 CREATE TABLE IF NOT EXISTS plant_images (
     id BIGSERIAL PRIMARY KEY,
@@ -41,3 +51,4 @@ ALTER TABLE watering_events ADD COLUMN IF NOT EXISTS weather_code INTEGER;
 ALTER TABLE watering_events ADD COLUMN IF NOT EXISTS min_temperature_c REAL;
 ALTER TABLE watering_events ADD COLUMN IF NOT EXISTS max_temperature_c REAL;
 ALTER TABLE watering_events ADD COLUMN IF NOT EXISTS fertilizer BOOLEAN NOT NULL DEFAULT FALSE;
+

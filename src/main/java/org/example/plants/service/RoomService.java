@@ -1,0 +1,67 @@
+package org.example.plants.service;
+
+import org.example.plants.model.Plant;
+import org.example.plants.model.Room;
+import org.example.plants.repository.PlantRepository;
+import org.example.plants.repository.RoomRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class RoomService {
+    private static final Logger log = LoggerFactory.getLogger(RoomService.class);
+
+    private final RoomRepository roomRepository;
+    private final PlantRepository plantRepository;
+
+    public RoomService(RoomRepository roomRepository, PlantRepository plantRepository) {
+        this.roomRepository = roomRepository;
+        this.plantRepository = plantRepository;
+    }
+
+    public List<Room> getAllRooms() {
+        return roomRepository.findAllByOrderByNameAsc();
+    }
+
+    public boolean nameTaken(String name) {
+        return roomRepository.existsByNameIgnoreCase(name.trim());
+    }
+
+    public boolean nameTakenByOtherRoom(String name, Long id) {
+        return roomRepository.existsByNameIgnoreCaseAndIdNot(name.trim(), id);
+    }
+
+    public Room createRoom(String name) {
+        return roomRepository.save(new Room(name.trim()));
+    }
+
+    public Room renameRoom(Long id, String name) {
+        Room room = roomRepository.findById(id).orElse(null);
+        if (room == null) return null;
+        room.setName(name.trim());
+        return roomRepository.save(room);
+    }
+
+    public boolean roomExists(Long id) {
+        return roomRepository.existsById(id);
+    }
+
+    public long plantCount(Long roomId) {
+        return plantRepository.countByRoom_Id(roomId);
+    }
+
+    /** Only deletes an empty room; a plant always belongs to one, so its plants must move first. */
+    public boolean deleteRoom(Long id) {
+        if (!roomRepository.existsById(id) || plantCount(id) > 0) return false;
+        roomRepository.deleteById(id);
+        log.info("Deleted room with id {}.", id);
+        return true;
+    }
+
+    public List<Plant> getPlantsInRoom(Long roomId) {
+        return plantRepository.findByRoom_Id(roomId);
+    }
+}

@@ -6,6 +6,7 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.example.plants.dto.PlantCreateRequest;
 import org.example.plants.model.Plant;
 import org.example.plants.model.PlantImage;
@@ -36,9 +37,11 @@ public class PlantController {
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public Plant createPlant(@RequestBody @Valid PlantCreateRequest request) {
-        return plantService.createPlant(request);
+    public ResponseEntity<Plant> createPlant(@RequestBody @Valid PlantCreateRequest request) {
+        Plant plant = plantService.createPlant(request);
+        return plant != null
+                ? ResponseEntity.status(HttpStatus.CREATED).body(plant)
+                : ResponseEntity.badRequest().build();
     }
 
     @GetMapping
@@ -50,6 +53,13 @@ public class PlantController {
     public ResponseEntity<Plant> updateLocation(@PathVariable Long id,
                                                 @RequestBody LocationUpdateRequest request) {
         Plant plant = plantService.updateLocation(id, request.location());
+        return plant != null ? ResponseEntity.ok(plant) : ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{id}/room")
+    public ResponseEntity<Plant> setRoom(@PathVariable Long id,
+                                         @RequestBody @Valid RoomAssignmentRequest request) {
+        Plant plant = plantService.setRoom(id, request.roomId());
         return plant != null ? ResponseEntity.ok(plant) : ResponseEntity.notFound().build();
     }
 
@@ -107,4 +117,6 @@ public class PlantController {
     }
 
     record LocationUpdateRequest(String location) {}
+
+    record RoomAssignmentRequest(@NotNull Long roomId) {}
 }

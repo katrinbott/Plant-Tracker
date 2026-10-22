@@ -3,8 +3,10 @@ package org.example.plants.service;
 import org.example.plants.dto.PlantCreateRequest;
 import org.example.plants.model.Plant;
 import org.example.plants.model.PlantImage;
+import org.example.plants.model.Room;
 import org.example.plants.repository.PlantImageRepository;
 import org.example.plants.repository.PlantRepository;
+import org.example.plants.repository.RoomRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +30,7 @@ class PlantServiceTest {
 
     @Mock PlantRepository plantRepository;
     @Mock PlantImageRepository plantImageRepository;
+    @Mock RoomRepository roomRepository;
     @InjectMocks PlantService plantService;
 
     // JUnit creates a real temporary directory for each test and deletes it afterwards
@@ -40,14 +43,27 @@ class PlantServiceTest {
     }
 
     @Test
+    void createPlant_returnsNullWhenRoomDoesNotExist() {
+        when(roomRepository.findById(99L)).thenReturn(Optional.empty());
+
+        Plant result = plantService.createPlant(
+                new PlantCreateRequest("Monstera", null, null, 99L));
+
+        assertThat(result).isNull();
+        verify(plantRepository, never()).save(any());
+    }
+
+    @Test
     void createPlant_persistsAllFields() {
+        when(roomRepository.findById(2L)).thenReturn(Optional.of(new Room("Living room")));
         when(plantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Plant result = plantService.createPlant(new PlantCreateRequest("Monstera", "Monstera deliciosa", "Living room"));
+        Plant result = plantService.createPlant(new PlantCreateRequest("Monstera", "Monstera deliciosa", "windowsill", 2L));
 
+        assertThat(result.getRoom().getName()).isEqualTo("Living room");
         assertThat(result.getName()).isEqualTo("Monstera");
         assertThat(result.getSpecies()).isEqualTo("Monstera deliciosa");
-        assertThat(result.getLocation()).isEqualTo("Living room");
+        assertThat(result.getLocation()).isEqualTo("windowsill");
     }
 
     @Test

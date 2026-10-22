@@ -3,8 +3,10 @@ package org.example.plants.service;
 import org.example.plants.dto.PlantCreateRequest;
 import org.example.plants.model.Plant;
 import org.example.plants.model.PlantImage;
+import org.example.plants.model.Room;
 import org.example.plants.repository.PlantImageRepository;
 import org.example.plants.repository.PlantRepository;
+import org.example.plants.repository.RoomRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,20 +27,36 @@ public class PlantService {
 
     private final PlantRepository plantRepository;
     private final PlantImageRepository plantImageRepository;
+    private final RoomRepository roomRepository;
 
     @Value("${app.upload-dir}")
     private String uploadDir;
 
-    public PlantService(PlantRepository plantRepository, PlantImageRepository plantImageRepository) {
+    public PlantService(PlantRepository plantRepository, PlantImageRepository plantImageRepository,
+                        RoomRepository roomRepository) {
         this.plantRepository = plantRepository;
         this.plantImageRepository = plantImageRepository;
+        this.roomRepository = roomRepository;
     }
 
+    /** Returns null when the requested room does not exist; every plant needs one. */
     public Plant createPlant(PlantCreateRequest request) {
+        Room room = roomRepository.findById(request.roomId()).orElse(null);
+        if (room == null) return null;
         Plant plant = new Plant();
         plant.setName(request.name());
         plant.setSpecies(request.species());
         plant.setLocation(request.location());
+        plant.setRoom(room);
+        return plantRepository.save(plant);
+    }
+
+    /** Returns null when either the plant or the target room does not exist. */
+    public Plant setRoom(Long plantId, Long roomId) {
+        Plant plant = plantRepository.findById(plantId).orElse(null);
+        Room room = roomRepository.findById(roomId).orElse(null);
+        if (plant == null || room == null) return null;
+        plant.setRoom(room);
         return plantRepository.save(plant);
     }
 
