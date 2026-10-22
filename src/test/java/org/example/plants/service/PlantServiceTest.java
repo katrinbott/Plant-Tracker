@@ -17,6 +17,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -47,6 +48,38 @@ class PlantServiceTest {
         assertThat(result.getName()).isEqualTo("Monstera");
         assertThat(result.getSpecies()).isEqualTo("Monstera deliciosa");
         assertThat(result.getLocation()).isEqualTo("Living room");
+    }
+
+    @Test
+    void updateLocation_savesTrimmedLocation() {
+        when(plantRepository.findById(1L)).thenReturn(Optional.of(new Plant()));
+        when(plantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Plant result = plantService.updateLocation(1L, "  Balcony ");
+
+        assertThat(result.getLocation()).isEqualTo("Balcony");
+    }
+
+    @Test
+    void updateLocation_clearsLocationWhenBlank() {
+        Plant plant = new Plant();
+        plant.setLocation("Kitchen");
+        when(plantRepository.findById(1L)).thenReturn(Optional.of(plant));
+        when(plantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Plant result = plantService.updateLocation(1L, "   ");
+
+        assertThat(result.getLocation()).isNull();
+    }
+
+    @Test
+    void updateLocation_returnsNullWhenPlantNotFound() {
+        when(plantRepository.findById(99L)).thenReturn(Optional.empty());
+
+        Plant result = plantService.updateLocation(99L, "Balcony");
+
+        assertThat(result).isNull();
+        verify(plantRepository, never()).save(any());
     }
 
     @Test

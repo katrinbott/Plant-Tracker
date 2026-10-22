@@ -46,6 +46,13 @@ public class PlantController {
         return plantService.getAllPlants();
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<Plant> updateLocation(@PathVariable Long id,
+                                                @RequestBody LocationUpdateRequest request) {
+        Plant plant = plantService.updateLocation(id, request.location());
+        return plant != null ? ResponseEntity.ok(plant) : ResponseEntity.notFound().build();
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deletePlant(@PathVariable Long id) {
@@ -98,4 +105,6 @@ public class PlantController {
                 ? ResponseEntity.noContent().build()
                 : ResponseEntity.notFound().build();
     }
+
+    record LocationUpdateRequest(String location) {}
 }

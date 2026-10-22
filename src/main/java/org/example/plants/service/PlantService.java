@@ -50,6 +50,13 @@ public class PlantService {
         return plantRepository.findById(id).orElse(null);
     }
 
+    public Plant updateLocation(Long id, String location) {
+        Plant plant = plantRepository.findById(id).orElse(null);
+        if (plant == null) return null;
+        plant.setLocation(location == null || location.isBlank() ? null : location.trim());
+        return plantRepository.save(plant);
+    }
+
     public PlantImage addImage(Long plantId, MultipartFile file, String note) throws IOException {
         if (!plantRepository.existsById(plantId))
             throw new RuntimeException("Plant not found");

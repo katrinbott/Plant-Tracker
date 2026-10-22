@@ -70,6 +70,30 @@ class PlantControllerTest {
     }
 
     @Test
+    void updateLocation_returns200WithUpdatedPlant() throws Exception {
+        Plant plant = new Plant();
+        plant.setName("Fern");
+        plant.setLocation("Balcony");
+        when(plantService.updateLocation(1L, "Balcony")).thenReturn(plant);
+
+        mockMvc.perform(patch("/plants/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"location\": \"Balcony\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.location").value("Balcony"));
+    }
+
+    @Test
+    void updateLocation_returns404WhenPlantNotFound() throws Exception {
+        when(plantService.updateLocation(eq(99L), any())).thenReturn(null);
+
+        mockMvc.perform(patch("/plants/99")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"location\": \"Balcony\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void deletePlant_returns204() throws Exception {
         mockMvc.perform(delete("/plants/1"))
                 .andExpect(status().isNoContent());
