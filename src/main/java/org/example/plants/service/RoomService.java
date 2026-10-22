@@ -1,5 +1,8 @@
 package org.example.plants.service;
 
+import org.example.plants.dto.OverduePlant;
+import org.example.plants.dto.PlantAnalytics;
+import org.example.plants.dto.RoomStats;
 import org.example.plants.model.Plant;
 import org.example.plants.model.Room;
 import org.example.plants.repository.PlantRepository;
@@ -8,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -16,10 +21,13 @@ public class RoomService {
 
     private final RoomRepository roomRepository;
     private final PlantRepository plantRepository;
+    private final AnalyticsService analyticsService;
 
-    public RoomService(RoomRepository roomRepository, PlantRepository plantRepository) {
+    public RoomService(RoomRepository roomRepository, PlantRepository plantRepository,
+                       AnalyticsService analyticsService) {
         this.roomRepository = roomRepository;
         this.plantRepository = plantRepository;
+        this.analyticsService = analyticsService;
     }
 
     public List<Room> getAllRooms() {
@@ -63,5 +71,47 @@ public class RoomService {
 
     public List<Plant> getPlantsInRoom(Long roomId) {
         return plantRepository.findByRoom_Id(roomId);
+    }
+
+    public List<RoomStats> getRoomStats() {
+        return getAllRooms().stream().map(this::statsFor).toList();
+    }
+
+    // Per-plant numbers come from AnalyticsService so the interval maths lives in one
+    // place. That is a query per plant, which is fine at this size.
+    private RoomStats statsFor(Room room) {
+        List<Plant> plants = plantRepository.findByRoom_Id(room.getId());
+        List<OverduePlant> overdue = new ArrayList<>();
+        Long daysSinceLast = null;
+        double averageTotal = 0;
+        int averageCount = 0;
+
+        for (Plant plant : plants) {
+            PlantAnalytics analytics = analyticsService.getAnalyticsForPlant(plant.getId());
+            Long since = analytics.daysSinceLastWatering();
+            Double average = analytics.averageDaysBetweenWaterings();
+            Double median = analytics.medianDaysBetweenWaterings();
+
+            // The room was last watered whenever its most recently watered plant was.
+            if (since != null && (daysSinceLast == null || since < daysSinceLast)) {
+                daysSinceLast = since;
+            }
+            if (average != null) {
+                averageTotal += average;
+                averageCount++;
+            }
+            // Measured against the median, not the mean: a single forgotten stretch
+            // would otherwise raise the bar and hide a plant that is genuinely due.
+            // Both are null until a plant has two waterings, so a new plant is never
+            // called overdue.
+            if (median != null && since != null && since > median) {
+                overdue.add(new OverduePlant(plant.getId(), plant.getName(), since, median));
+            }
+        }
+
+        overdue.sort(Comparator.comparingLong(OverduePlant::daysSinceLastWatering).reversed());
+        Double roomAverage = averageCount == 0 ? null : averageTotal / averageCount;
+        return new RoomStats(room.getId(), room.getName(), plants.size(),
+                daysSinceLast, roomAverage, overdue);
     }
 }

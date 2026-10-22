@@ -45,6 +45,9 @@ function showTab(name) {
         loadWateringEvents();
         loadLocation();
     }
+    if (name === 'rooms') {
+        loadRoomStats();
+    }
     if (name === 'analytics') {
         populateAnalyticsDropdown();
         loadAnalytics();
@@ -173,6 +176,138 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function describeRoomRecency(stats) {
+    if (stats.plantCount === 0) return 'no plants yet';
+    if (stats.daysSinceLastWatering === null) return 'never watered';
+    if (stats.daysSinceLastWatering === 0) return 'watered today';
+    if (stats.daysSinceLastWatering === 1) return 'watered yesterday';
+    return `watered ${stats.daysSinceLastWatering} days ago`;
+}
+
+async function loadRoomStats() {
+    const list = document.getElementById('rooms-list');
+    try {
+        const stats = await apiFetch('/rooms/stats');
+        if (stats.length === 0) {
+            list.innerHTML = '<p class="empty">No rooms yet.</p>';
+            return;
+        }
+        list.innerHTML = stats.map(s => {
+            const summary = [
+                s.plantCount === 1 ? '1 plant' : `${s.plantCount} plants`,
+                describeRoomRecency(s),
+                s.averageDaysBetweenWaterings !== null
+                    ? `avg every ${s.averageDaysBetweenWaterings.toFixed(1)} days` : null,
+            ].filter(Boolean).join(' · ');
+            const overdue = s.overduePlants.length === 0 ? '' : `
+                <div style="font-size:0.85rem; color:#c0392b;">
+                    Overdue: ${s.overduePlants.map(p =>
+                        `${escapeHtml(p.name)} (${p.daysSinceLastWatering} days, usually every ${p.medianDaysBetweenWaterings.toFixed(1)})`
+                    ).join(', ')}
+                </div>`;
+            return `
+                <div class="card" style="flex-direction:column; align-items:stretch; gap:0.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div class="card-info">
+                            <strong>${escapeHtml(s.name)}</strong>
+                            <span>${summary}</span>
+                        </div>
+                        <div style="display:flex; gap:0.5rem; align-items:center;">
+                            <button type="button" class="qr-btn" onclick="toggleRoomRename(${s.roomId})">Rename</button>
+                            <button class="delete-btn" onclick="deleteRoom(${s.roomId})" title="Delete room">✕</button>
+                        </div>
+                    </div>
+                    ${overdue}
+                    <div id="room-rename-${s.roomId}" style="display:none; gap:0.5rem;">
+                        <input type="text" id="room-rename-input-${s.roomId}" value="${escapeHtml(s.name)}"
+                               style="flex:1; margin-top:0; padding:0.4rem; font-size:0.9rem;"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();saveRoomName(${s.roomId});}">
+                        <button type="button" onclick="saveRoomName(${s.roomId})"
+                            style="padding:0.4rem 1rem; background:#2d6a2d; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.9rem;">Save</button>
+                    </div>
+                    <div class="error" id="room-action-error-${s.roomId}"></div>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        list.innerHTML = '<p class="error">Failed to load rooms.</p>';
+    }
+}
+
+async function addRoom(event) {
+    event.preventDefault();
+    const error = document.getElementById('room-error');
+    error.textContent = '';
+    const name = document.getElementById('room-name').value.trim();
+    const res = await fetch('/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+    });
+    if (res.status === 409) {
+        error.textContent = 'A room with that name already exists.';
+        return;
+    }
+    if (!res.ok) {
+        error.textContent = 'Failed to add room.';
+        return;
+    }
+    event.target.reset();
+    await loadRooms();
+    await loadRoomStats();
+}
+
+function toggleRoomRename(roomId) {
+    const row = document.getElementById(`room-rename-${roomId}`);
+    const open = row.style.display === 'none';
+    row.style.display = open ? 'flex' : 'none';
+    document.getElementById(`room-action-error-${roomId}`).textContent = '';
+    if (open) document.getElementById(`room-rename-input-${roomId}`).focus();
+}
+
+async function saveRoomName(roomId) {
+    const error = document.getElementById(`room-action-error-${roomId}`);
+    error.textContent = '';
+    const name = document.getElementById(`room-rename-input-${roomId}`).value.trim();
+    if (!name) {
+        error.textContent = 'Enter a room name.';
+        return;
+    }
+    const res = await fetch(`/rooms/${roomId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+    });
+    if (res.status === 409) {
+        error.textContent = 'Another room already has that name.';
+        return;
+    }
+    if (!res.ok) {
+        error.textContent = 'Failed to rename room.';
+        return;
+    }
+    await loadRooms();
+    await loadPlants();
+    await loadRoomStats();
+}
+
+async function deleteRoom(roomId) {
+    const error = document.getElementById(`room-action-error-${roomId}`);
+    error.textContent = '';
+    const res = await fetch(`/rooms/${roomId}`, { method: 'DELETE' });
+    // A plant always belongs to a room, so a room still holding plants cannot go.
+    if (res.status === 409) {
+        error.textContent = 'This room still has plants. Move them to another room first.';
+        return;
+    }
+    if (!res.ok) {
+        error.textContent = 'Failed to delete room.';
+        return;
+    }
+    await loadRooms();
+    await loadRoomStats();
 }
 
 // ── Plants ────────────────────────────────────────────────────────────────────

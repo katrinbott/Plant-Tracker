@@ -2,6 +2,7 @@ package org.example.plants.controller;
 
 import jakarta.validation.Valid;
 import org.example.plants.dto.RoomCreateRequest;
+import org.example.plants.dto.RoomStats;
 import org.example.plants.model.Plant;
 import org.example.plants.model.Room;
 import org.example.plants.service.RoomService;
@@ -51,6 +52,11 @@ public class RoomController {
         if (roomService.plantCount(id) > 0) return ResponseEntity.status(HttpStatus.CONFLICT).build();
         roomService.deleteRoom(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/stats")
+    public List<RoomStats> getRoomStats() {
+        return roomService.getRoomStats();
     }
 
     @GetMapping("/{id}/plants")

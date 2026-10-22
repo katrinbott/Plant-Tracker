@@ -1,5 +1,7 @@
 package org.example.plants.controller;
 
+import org.example.plants.dto.OverduePlant;
+import org.example.plants.dto.RoomStats;
 import org.example.plants.model.Room;
 import org.example.plants.service.RoomService;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,34 @@ class RoomControllerTest {
         mockMvc.perform(get("/rooms"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Living room"));
+    }
+
+    @Test
+    void getRoomStats_returnsCountsAverageAndOverduePlants() throws Exception {
+        when(roomService.getRoomStats()).thenReturn(List.of(new RoomStats(
+                1L, "Living room", 2, 2L, 6.0,
+                List.of(new OverduePlant(11L, "Pothos", 20L, 5.0)))));
+
+        mockMvc.perform(get("/rooms/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Living room"))
+                .andExpect(jsonPath("$[0].plantCount").value(2))
+                .andExpect(jsonPath("$[0].daysSinceLastWatering").value(2))
+                .andExpect(jsonPath("$[0].averageDaysBetweenWaterings").value(6.0))
+                .andExpect(jsonPath("$[0].overduePlants[0].name").value("Pothos"))
+                .andExpect(jsonPath("$[0].overduePlants[0].daysSinceLastWatering").value(20));
+    }
+
+    @Test
+    void getRoomStats_serialisesNullsForRoomWithNoWaterings() throws Exception {
+        when(roomService.getRoomStats()).thenReturn(List.of(new RoomStats(
+                1L, "Hallway", 1, null, null, List.of())));
+
+        mockMvc.perform(get("/rooms/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].daysSinceLastWatering").isEmpty())
+                .andExpect(jsonPath("$[0].averageDaysBetweenWaterings").isEmpty())
+                .andExpect(jsonPath("$[0].overduePlants").isEmpty());
     }
 
     @Test

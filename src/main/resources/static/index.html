@@ -150,6 +150,16 @@
         <button class="tab active" data-tab="plants" onclick="showTab('plants')">Plants</button>
         <button class="tab" data-tab="watering" onclick="showTab('watering')">Watering</button>
         <button class="tab" data-tab="analytics" onclick="showTab('analytics')">Analytics</button>
+        <button class="tab" data-tab="rooms" onclick="showTab('rooms')">Rooms</button>
+    </div>
+
+    <div id="rooms" class="section">
+        <form onsubmit="addRoom(event)">
+            <label>Room name* <input type="text" id="room-name" required placeholder="e.g. Bedroom"></label>
+            <button type="submit">Add Room</button>
+            <div class="error" id="room-error"></div>
+        </form>
+        <div class="list" id="rooms-list"></div>
     </div>
 
     <div id="plants" class="section active">
