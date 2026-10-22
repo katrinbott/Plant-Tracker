@@ -22,7 +22,7 @@ class AnalyticsControllerTest {
     @Test
     void getAnalytics_returnsCorrectJson() throws Exception {
         when(analyticsService.getAnalyticsForPlant(1L))
-                .thenReturn(new PlantAnalytics(5, 3.5, 2L));
+                .thenReturn(new PlantAnalytics(5, 3.5, 3.0, 2L));
 
         mockMvc.perform(get("/analytics/plant/1"))
                 .andExpect(status().isOk())
@@ -34,7 +34,7 @@ class AnalyticsControllerTest {
     @Test
     void getAnalytics_returnsNullsWhenNoEvents() throws Exception {
         when(analyticsService.getAnalyticsForPlant(1L))
-                .thenReturn(new PlantAnalytics(0, null, null));
+                .thenReturn(new PlantAnalytics(0, null, null, null));
 
         mockMvc.perform(get("/analytics/plant/1"))
                 .andExpect(status().isOk())

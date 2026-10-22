@@ -70,6 +70,61 @@ class AnalyticsServiceTest {
     }
 
     @Test
+    void medianIgnoresAForgottenStretchThatSkewsTheAverage() {
+        LocalDateTime now = LocalDateTime.now();
+        // gaps: 5, 5, 5, 30 — the 30 is a stretch where the plant was forgotten
+        when(wateringEventRepository.findByPlant_IdOrderByWateredAtDesc(1L)).thenReturn(List.of(
+                eventAt(now.minusDays(1)),
+                eventAt(now.minusDays(6)),
+                eventAt(now.minusDays(11)),
+                eventAt(now.minusDays(16)),
+                eventAt(now.minusDays(46))
+        ));
+
+        PlantAnalytics result = analyticsService.getAnalyticsForPlant(1L);
+
+        assertThat(result.averageDaysBetweenWaterings()).isEqualTo(11.25);
+        // Even number of gaps, so the median is the mean of the two middle values: 5 and 5.
+        assertThat(result.medianDaysBetweenWaterings()).isEqualTo(5.0);
+    }
+
+    @Test
+    void oddNumberOfGaps_medianIsTheMiddleGap() {
+        LocalDateTime now = LocalDateTime.now();
+        // gaps: 4, 6, 20 → median 6
+        when(wateringEventRepository.findByPlant_IdOrderByWateredAtDesc(1L)).thenReturn(List.of(
+                eventAt(now.minusDays(2)),
+                eventAt(now.minusDays(6)),
+                eventAt(now.minusDays(12)),
+                eventAt(now.minusDays(32))
+        ));
+
+        assertThat(analyticsService.getAnalyticsForPlant(1L).medianDaysBetweenWaterings())
+                .isEqualTo(6.0);
+    }
+
+    @Test
+    void twoEvents_medianEqualsTheSingleGap() {
+        LocalDateTime now = LocalDateTime.now();
+        when(wateringEventRepository.findByPlant_IdOrderByWateredAtDesc(1L)).thenReturn(List.of(
+                eventAt(now.minusDays(2)),
+                eventAt(now.minusDays(9))
+        ));
+
+        assertThat(analyticsService.getAnalyticsForPlant(1L).medianDaysBetweenWaterings())
+                .isEqualTo(7.0);
+    }
+
+    @Test
+    void oneEvent_hasNoMedian() {
+        LocalDateTime now = LocalDateTime.now();
+        when(wateringEventRepository.findByPlant_IdOrderByWateredAtDesc(1L))
+                .thenReturn(List.of(eventAt(now.minusDays(3))));
+
+        assertThat(analyticsService.getAnalyticsForPlant(1L).medianDaysBetweenWaterings()).isNull();
+    }
+
+    @Test
     void multipleEvents_averagesGapsCorrectly() {
         LocalDateTime now = LocalDateTime.now();
         // gaps: 3 days + 7 days → average 5.0
