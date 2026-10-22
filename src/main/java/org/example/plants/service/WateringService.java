@@ -31,14 +31,39 @@ public class WateringService {
         Plant plant = plantRepository.findById(plantId)
                 .orElseThrow(() -> new RuntimeException("Plant not found"));
 
+        return wateringEventRepository.save(
+                buildEvent(plant, amountMl, note, fertilizer, weatherService.fetchCurrent()));
+    }
+
+    /**
+     * Records one event per plant, with no amount: a round rarely gives every plant the
+     * same volume, so amounts belong on single events. Returns null when any id is
+     * unknown, so watering a room is all or nothing rather than silently skipping
+     * plants. Duplicate ids are rejected the same way, which stops a plant being
+     * watered twice in one round.
+     */
+    public List<WateringEvent> recordWateringForPlants(List<Long> plantIds, String note,
+                                                       boolean fertilizer) {
+        List<Plant> plants = plantRepository.findAllById(plantIds);
+        if (plants.size() != plantIds.size()) return null;
+
+        // One weather lookup for the whole round: a room is watered in a single go, so
+        // per-plant calls would hit the API repeatedly and stamp differing readings.
+        WeatherService.WeatherData weather = weatherService.fetchCurrent();
+
+        return wateringEventRepository.saveAll(plants.stream()
+                .map(plant -> buildEvent(plant, null, note, fertilizer, weather))
+                .toList());
+    }
+
+    private WateringEvent buildEvent(Plant plant, Integer amountMl, String note,
+                                     boolean fertilizer, WeatherService.WeatherData weather) {
         WateringEvent wateringEvent = new WateringEvent();
         wateringEvent.setPlant(plant);
         wateringEvent.setWateredAt(LocalDateTime.now());
         wateringEvent.setAmountMl(amountMl);
         wateringEvent.setNote(note);
         wateringEvent.setFertilizer(fertilizer);
-
-        WeatherService.WeatherData weather = weatherService.fetchCurrent();
 
         if (weather != null) {
             wateringEvent.setTemperatureC(weather.temperatureC());
@@ -48,7 +73,7 @@ public class WateringService {
             wateringEvent.setMaxTemperatureC(weather.maxTemperatureC());
         }
 
-        return wateringEventRepository.save(wateringEvent);
+        return wateringEvent;
     }
 
     public List<WateringEvent> getAllWateringEvents() {

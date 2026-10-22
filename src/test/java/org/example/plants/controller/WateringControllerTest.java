@@ -13,7 +13,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -78,6 +80,40 @@ class WateringControllerTest {
         mockMvc.perform(post("/watering")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"amountMl\": 200}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void recordWateringForPlants_returns201WithOneEventPerPlant() throws Exception {
+        when(wateringService.recordWateringForPlants(List.of(1L, 2L), "weekly round", true))
+                .thenReturn(List.of(event(1L, null, "weekly round"), event(2L, null, "weekly round")));
+
+        mockMvc.perform(post("/watering/bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"plantIds\": [1, 2], \"note\": \"weekly round\", \"fertilizer\": true}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].note").value("weekly round"));
+    }
+
+    @Test
+    void recordWateringForPlants_returns400WhenPlantIdsEmpty() throws Exception {
+        mockMvc.perform(post("/watering/bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"plantIds\": []}"))
+                .andExpect(status().isBadRequest());
+
+        verify(wateringService, never()).recordWateringForPlants(any(), any(), anyBoolean());
+    }
+
+    @Test
+    void recordWateringForPlants_returns400WhenAnyPlantIsUnknown() throws Exception {
+        when(wateringService.recordWateringForPlants(any(), any(), anyBoolean()))
+                .thenReturn(null);
+
+        mockMvc.perform(post("/watering/bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"plantIds\": [1, 99]}"))
                 .andExpect(status().isBadRequest());
     }
 

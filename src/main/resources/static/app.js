@@ -41,6 +41,7 @@ function showTab(name) {
     });
     if (name === 'watering') {
         populatePlantDropdown();
+        renderRoomPlantChecklist();
         loadWateringEvents();
         loadLocation();
     }
@@ -87,6 +88,16 @@ function renderRoomOptions() {
         select.innerHTML = options;
         if (previous && previous !== NEW_ROOM) select.value = previous;
     });
+
+    // The room-watering picker chooses an existing room to water, so it offers no
+    // "create one" option.
+    const wateringSelect = document.getElementById('room-watering-room');
+    if (wateringSelect) {
+        const previous = wateringSelect.value;
+        wateringSelect.innerHTML = '<option value="">Select a room…</option>'
+            + rooms.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
+        if (previous) wateringSelect.value = previous;
+    }
 }
 
 function setRoomSelection(selectId, value) {
@@ -412,6 +423,71 @@ async function loadWateringEvents() {
             }).join('');
     } catch (e) {
         list.innerHTML = '<p class="error">Failed to load watering events.</p>';
+    }
+}
+
+// ── Room watering ─────────────────────────────────────────────────────────────
+
+function renderRoomPlantChecklist() {
+    const roomId = document.getElementById('room-watering-room').value;
+    const container = document.getElementById('room-watering-plants');
+    document.getElementById('room-watering-error').textContent = '';
+    if (!roomId) {
+        container.innerHTML = '';
+        updateRoomWateringButton();
+        return;
+    }
+    const roomPlants = plants.filter(p => p.roomId == roomId);
+    container.innerHTML = roomPlants.length === 0
+        ? '<p class="empty">No plants in this room yet.</p>'
+        : roomPlants.map(p => `
+            <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem; font-size:0.95rem; color:#333;">
+                <input type="checkbox" class="room-watering-plant" value="${p.id}" checked
+                       onchange="updateRoomWateringButton()"
+                       style="display:inline-block; width:auto; margin-top:0;">
+                ${escapeHtml(p.name)}${p.location ? ` <span style="color:#888; font-size:0.85rem;">· ${escapeHtml(p.location)}</span>` : ''}
+            </label>
+        `).join('');
+    updateRoomWateringButton();
+}
+
+function checkedRoomPlantIds() {
+    return [...document.querySelectorAll('.room-watering-plant:checked')]
+        .map(box => parseInt(box.value));
+}
+
+function updateRoomWateringButton() {
+    const count = checkedRoomPlantIds().length;
+    const button = document.getElementById('room-watering-btn');
+    button.textContent = count === 1 ? 'Water 1 plant' : `Water ${count} plants`;
+    button.disabled = count === 0;
+    button.style.opacity = count === 0 ? '0.5' : '1';
+    button.style.cursor = count === 0 ? 'default' : 'pointer';
+}
+
+async function recordRoomWatering() {
+    const error = document.getElementById('room-watering-error');
+    error.textContent = '';
+    const plantIds = checkedRoomPlantIds();
+    if (plantIds.length === 0) {
+        error.textContent = 'Tick at least one plant.';
+        return;
+    }
+    try {
+        await apiFetch('/watering/bulk', {
+            method: 'POST',
+            body: JSON.stringify({
+                plantIds,
+                note: document.getElementById('room-watering-note').value || null,
+                fertilizer: document.getElementById('room-watering-fertilizer').checked,
+            })
+        });
+        document.getElementById('room-watering-note').value = '';
+        document.getElementById('room-watering-fertilizer').checked = false;
+        renderRoomPlantChecklist();
+        await loadWateringEvents();
+    } catch (e) {
+        error.textContent = 'Failed to record the watering round.';
     }
 }
 

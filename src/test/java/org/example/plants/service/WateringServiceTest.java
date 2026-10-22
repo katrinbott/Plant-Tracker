@@ -10,6 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -85,6 +86,41 @@ class WateringServiceTest {
         WateringEvent result = wateringService.recordWatering(1L, 200, null, false);
 
         assertThat(result.isFertilizer()).isFalse();
+    }
+
+    @Test
+    void recordWateringForPlants_createsOneEventPerPlantAndFetchesWeatherOnce() {
+        when(plantRepository.findAllById(List.of(1L, 2L, 3L)))
+                .thenReturn(List.of(new Plant(), new Plant(), new Plant()));
+        when(weatherService.fetchCurrent()).thenReturn(
+                new WeatherService.WeatherData(20.5, 65.0, 1, 15.0, 25.0));
+        when(wateringEventRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        List<WateringEvent> result =
+                wateringService.recordWateringForPlants(List.of(1L, 2L, 3L), "weekly round", true);
+
+        assertThat(result).hasSize(3);
+        assertThat(result).allSatisfy(event -> {
+            // Amounts differ per plant, so a round never records one.
+            assertThat(event.getAmountMl()).isNull();
+            assertThat(event.getNote()).isEqualTo("weekly round");
+            assertThat(event.isFertilizer()).isTrue();
+            assertThat(event.getTemperatureC()).isEqualTo(20.5);
+        });
+        // One round of watering is one weather lookup, not one per plant.
+        verify(weatherService, times(1)).fetchCurrent();
+    }
+
+    @Test
+    void recordWateringForPlants_returnsNullWhenAnyPlantIsUnknown() {
+        when(plantRepository.findAllById(List.of(1L, 99L))).thenReturn(List.of(new Plant()));
+
+        List<WateringEvent> result =
+                wateringService.recordWateringForPlants(List.of(1L, 99L), null, false);
+
+        assertThat(result).isNull();
+        verify(wateringEventRepository, never()).saveAll(any());
+        verify(weatherService, never()).fetchCurrent();
     }
 
     @Test
