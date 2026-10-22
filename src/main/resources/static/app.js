@@ -1,4 +1,5 @@
 let plants = [];
+let rooms = [];
 let imagesByPlantId = {};
 
 const WEATHER_EMOJIS = {
@@ -49,6 +50,120 @@ function showTab(name) {
     }
 }
 
+// ── Rooms ─────────────────────────────────────────────────────────────────────
+
+const NEW_ROOM = '__new__';
+
+function roomName(roomId) {
+    return rooms.find(r => r.id === roomId)?.name ?? null;
+}
+
+async function loadRooms() {
+    try {
+        rooms = await apiFetch('/rooms');
+    } catch (e) {
+        rooms = [];
+    }
+    renderRoomOptions();
+}
+
+// Each room dropdown has its own inline "create a room" row, keyed by the select's id.
+const ROOM_PICKERS = {
+    'plant-room': { row: 'new-room-row', name: 'new-room-name', error: 'new-room-error' },
+    'plant-room-input': { row: 'analytics-new-room-row', name: 'analytics-new-room-name', error: 'analytics-new-room-error' },
+};
+
+// Every plant belongs to a room, so there is no "no room" choice — only a prompt
+// when none is picked yet, the real rooms, and the inline create option.
+function renderRoomOptions() {
+    const options = '<option value="">Select a room…</option>'
+        + rooms.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('')
+        + `<option value="${NEW_ROOM}">+ New room…</option>`;
+
+    Object.keys(ROOM_PICKERS).forEach(selectId => {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const previous = select.value;
+        select.innerHTML = options;
+        if (previous && previous !== NEW_ROOM) select.value = previous;
+    });
+}
+
+function setRoomSelection(selectId, value) {
+    const select = document.getElementById(selectId);
+    select.value = value ?? '';
+    // Remembered so cancelling "+ New room…" can put the previous choice back
+    // instead of silently leaving the plant with no room.
+    select.dataset.lastRoom = select.value;
+}
+
+function onRoomSelectChange(select) {
+    const picker = ROOM_PICKERS[select.id];
+    const creating = select.value === NEW_ROOM;
+    if (!creating) select.dataset.lastRoom = select.value;
+    document.getElementById(picker.row).style.display = creating ? 'flex' : 'none';
+    document.getElementById(picker.error).textContent = '';
+    if (creating) document.getElementById(picker.name).focus();
+}
+
+function cancelNewRoom(selectId) {
+    const picker = ROOM_PICKERS[selectId];
+    document.getElementById(selectId).value = document.getElementById(selectId).dataset.lastRoom ?? '';
+    document.getElementById(picker.row).style.display = 'none';
+    document.getElementById(picker.name).value = '';
+    document.getElementById(picker.error).textContent = '';
+}
+
+// Raw fetch rather than apiFetch: a 409 means the room already exists, which is
+// worth handling as "select that one" instead of surfacing an error.
+async function createRoomInline(selectId) {
+    const picker = ROOM_PICKERS[selectId];
+    const nameInput = document.getElementById(picker.name);
+    const errorEl = document.getElementById(picker.error);
+    const name = nameInput.value.trim();
+    errorEl.textContent = '';
+    if (!name) {
+        errorEl.textContent = 'Enter a room name.';
+        return;
+    }
+    try {
+        const res = await fetch('/rooms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (res.status === 409) {
+            await loadRooms();
+            const existing = rooms.find(r => r.name.toLowerCase() === name.toLowerCase());
+            if (existing) selectCreatedRoom(selectId, existing.id);
+            errorEl.textContent = 'That room already exists, so it is now selected.';
+            return;
+        }
+        if (!res.ok) {
+            errorEl.textContent = 'Failed to create room.';
+            return;
+        }
+        const created = await res.json();
+        await loadRooms();
+        selectCreatedRoom(selectId, created.id);
+    } catch (e) {
+        errorEl.textContent = 'Failed to create room.';
+    }
+}
+
+function selectCreatedRoom(selectId, roomId) {
+    const picker = ROOM_PICKERS[selectId];
+    setRoomSelection(selectId, roomId);
+    document.getElementById(picker.row).style.display = 'none';
+    document.getElementById(picker.name).value = '';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // ── Plants ────────────────────────────────────────────────────────────────────
 
 async function loadPlants() {
@@ -81,7 +196,7 @@ async function loadPlants() {
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <div class="card-info">
                             <strong>${p.name}</strong>
-                            <span>${[p.species, p.location].filter(Boolean).join(' · ')}</span>
+                            <span>${[p.species, escapeHtml(roomName(p.roomId) ?? ''), p.location].filter(Boolean).join(' · ')}</span>
                         </div>
                         <div style="display:flex; gap:0.5rem; align-items:center;">
                             <label class="qr-btn camera-btn" title="Upload photo" style="cursor:pointer;">
@@ -114,18 +229,31 @@ async function loadPlants() {
     }
 }
 
+// Returns null when nothing real is picked, which blocks the submit.
+function selectedNewRoomId() {
+    const value = document.getElementById('plant-room').value;
+    return value && value !== NEW_ROOM ? parseInt(value) : null;
+}
+
 async function addPlant(event) {
     event.preventDefault();
     const error = document.getElementById('plant-error');
     error.textContent = '';
+    const roomId = selectedNewRoomId();
+    if (roomId === null) {
+        error.textContent = 'Pick a room, or create one first.';
+        return;
+    }
     const body = {
         name: document.getElementById('plant-name').value,
         species: document.getElementById('plant-species').value || null,
         location: document.getElementById('plant-location').value || null,
+        roomId,
     };
     try {
         await apiFetch('/plants', { method: 'POST', body: JSON.stringify(body) });
         event.target.reset();
+        cancelNewRoom();
         await loadPlants();
     } catch (e) {
         error.textContent = 'Failed to add plant.';
@@ -549,7 +677,8 @@ function renderPlantLocation(plant) {
     const card = document.getElementById('plant-location-card');
     if (!plant) { card.style.display = 'none'; return; }
     card.style.display = 'block';
-    document.getElementById('plant-location-display').textContent = plant.location || 'No location set';
+    document.getElementById('plant-location-display').textContent =
+        [roomName(plant.roomId), plant.location].filter(Boolean).join(' · ');
     document.getElementById('plant-location-form').style.display = 'none';
     document.getElementById('plant-location-edit-btn').textContent = 'Edit';
 }
@@ -557,11 +686,14 @@ function renderPlantLocation(plant) {
 function togglePlantLocationEdit() {
     const form = document.getElementById('plant-location-form');
     const editing = form.style.display === 'none';
-    form.style.display = editing ? 'flex' : 'none';
+    form.style.display = editing ? 'block' : 'none';
     document.getElementById('plant-location-edit-btn').textContent = editing ? 'Cancel' : 'Edit';
     if (editing) {
         const plant = plants.find(p => p.id == document.getElementById('analytics-plant').value);
         const input = document.getElementById('plant-location-input');
+        setRoomSelection('plant-room-input', plant?.roomId);
+        document.getElementById('analytics-new-room-row').style.display = 'none';
+        document.getElementById('analytics-new-room-error').textContent = '';
         input.value = plant?.location ?? '';
         input.focus();
     }
@@ -570,15 +702,25 @@ function togglePlantLocationEdit() {
 async function savePlantLocation() {
     const plantId = document.getElementById('analytics-plant').value;
     const location = document.getElementById('plant-location-input').value;
+    const roomValue = document.getElementById('plant-room-input').value;
+    if (!roomValue || roomValue === NEW_ROOM) {
+        document.getElementById('analytics-new-room-error').textContent =
+            roomValue === NEW_ROOM ? 'Create the new room first, or cancel.' : 'Pick a room.';
+        return;
+    }
     try {
-        const updated = await apiFetch(`/plants/${plantId}`, {
+        await apiFetch(`/plants/${plantId}`, {
             method: 'PATCH',
             body: JSON.stringify({ location })
+        });
+        const updated = await apiFetch(`/plants/${plantId}/room`, {
+            method: 'PUT',
+            body: JSON.stringify({ roomId: parseInt(roomValue) })
         });
         await loadPlants();
         renderPlantLocation(updated);
     } catch (e) {
-        alert('Failed to update location.');
+        alert('Failed to update room or spot.');
     }
 }
 
@@ -713,4 +855,5 @@ function renderTemperatureChart(events) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
-loadPlants();
+// Rooms first: the plant cards resolve room names from the cached list.
+loadRooms().then(loadPlants);
