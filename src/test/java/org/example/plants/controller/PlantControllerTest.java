@@ -3,6 +3,7 @@ package org.example.plants.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.plants.model.Plant;
 import org.example.plants.model.PlantImage;
+import org.example.plants.model.Room;
 import org.example.plants.service.PlantService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +43,7 @@ class PlantControllerTest {
         Plant plant = new Plant();
         plant.setName("Monstera");
         plant.setSpecies("Monstera deliciosa");
+        plant.setRoom(roomWithId(2L, "Living room"));
         when(plantService.createPlant(any())).thenReturn(plant);
 
         mockMvc.perform(post("/plants")
@@ -49,7 +51,9 @@ class PlantControllerTest {
                         .content("{\"name\": \"Monstera\", \"species\": \"Monstera deliciosa\", \"roomId\": 2}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Monstera"))
-                .andExpect(jsonPath("$.species").value("Monstera deliciosa"));
+                .andExpect(jsonPath("$.species").value("Monstera deliciosa"))
+                .andExpect(jsonPath("$.roomId").value(2))
+                .andExpect(jsonPath("$.room").doesNotExist());
     }
 
     @Test
@@ -117,13 +121,16 @@ class PlantControllerTest {
     void setRoom_returns200WithUpdatedPlant() throws Exception {
         Plant plant = new Plant();
         plant.setName("Fern");
+        plant.setRoom(roomWithId(3L, "Kitchen"));
         when(plantService.setRoom(1L, 3L)).thenReturn(plant);
 
         mockMvc.perform(put("/plants/1/room")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"roomId\": 3}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Fern"));
+                .andExpect(jsonPath("$.name").value("Fern"))
+                .andExpect(jsonPath("$.roomId").value(3))
+                .andExpect(jsonPath("$.room").doesNotExist());
     }
 
     @Test
@@ -227,5 +234,15 @@ class PlantControllerTest {
 
         mockMvc.perform(get("/plants/1/images/99"))
                 .andExpect(status().isNotFound());
+    }
+
+    // A plant serializes its room as a bare roomId, which the frontend reads. The
+    // association itself must stay out of the JSON: it is lazily fetched, so with
+    // open-in-view off Jackson would walk into a detached proxy and fail at runtime.
+    // Nothing here is a proxy, so only asserting roomId would let that regression through.
+    private static Room roomWithId(Long id, String name) {
+        Room room = new Room(name);
+        room.setId(id);
+        return room;
     }
 }
