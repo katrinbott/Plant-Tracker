@@ -208,9 +208,12 @@ against a database that already had plants.
 
 ---
 
-## Queued work on `main`
+## Known problems, not yet fixed
 
-### Two bare `RuntimeException`s answer 500
+Real defects, deliberately left for later, each with what it is waiting for. Distinct from
+"Known and accepted" below, which is a list of things that are fine as they are.
+
+### Two bare `RuntimeException`s answer 500 — do on `main`, after rooms merges
 
 Both predate the rooms branch and are reachable today. Spring maps an unannotated
 `RuntimeException` to **500**, so a client asking about a plant that isn't there is told the
@@ -244,18 +247,29 @@ One commit for both sites, stating they are pre-existing bugs. If it starts pull
 runs on a list that cannot be empty at that point. Both are invariant assertions, not reachable
 errors.
 
-### Deleting a plant orphans its photo files
+### Deleting a plant orphans its photo files — do on `main`, any time
 
 `PlantService.deletePlant` only calls `plantRepository.deleteById`. The database cascades the
 `plant_images` rows, but nothing deletes the files, so every photo of a deleted plant stays in
 `./uploads/` forever. `deleteImage` does call `Files.deleteIfExists` — the single-photo path
 cleans up, the whole-plant path does not.
 
+### `savePlantLocation` fires two requests that are not atomic — do with the edit form
+
+`PATCH /plants/{id}` saves the spot, then `PUT /plants/{id}/room` saves the room. If the second
+fails the spot is already saved, the alert does not hint that half of it landed, and
+`loadPlants()` never runs — so the UI keeps showing the old spot that was in fact persisted.
+
+Not patched in isolation on purpose: the edit form collapses it to one form, one endpoint, one
+request, and a narrower fix here would be thrown away. If the edit form slips, the cheap interim
+fix is to run `loadPlants()` in a `finally` so the UI at least stops lying about what was saved.
+
 ---
 
 ## Known and accepted
 
-Logged so they are not rediscovered as surprises.
+**Not** defects — things that are fine as they are. Logged so they are neither rediscovered as
+surprises nor "fixed" by someone who assumes they were overlooked.
 
 - **`RoomService.statsFor` is N+1** — one analytics query per plant on every Rooms tab visit.
   The code comment already owns this and it is fine at this size.
@@ -263,11 +277,6 @@ Logged so they are not rediscovered as surprises.
   `rooms.name` UNIQUE constraint is case-sensitive. The API behaves consistently; the database
   is just a weaker backstop than the code above it. Fine as-is, worth knowing before anyone
   relies on the constraint.
-- **`savePlantLocation` fires two requests that are not atomic** — `PATCH /plants/{id}` for the
-  spot, then `PUT /plants/{id}/room`. If the second fails the spot is already saved, the alert
-  does not hint that half of it landed, and `loadPlants()` never runs, so the UI keeps showing
-  the old spot that was in fact persisted. This is the wart the edit form removes properly: one
-  form, one endpoint, one request. Deliberately not patched in isolation.
 - **In `index.html`, the `analytics-stats` div is written `id="analytics-stats"style="…"`** with
   no space between the attributes. Browsers recover and it renders correctly, which is why it
   has gone unnoticed. Pre-existing, not a rooms issue. (Searched for rather than cited by line,
