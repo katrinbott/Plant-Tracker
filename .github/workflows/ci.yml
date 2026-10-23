@@ -19,7 +19,7 @@ jobs:
           cache: maven
 
       - name: Build and test with Maven
-        run: mvn verify -B
+        run: ./mvnw verify -B
 
   docker:
     runs-on: ubuntu-latest
