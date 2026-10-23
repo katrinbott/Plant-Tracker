@@ -191,18 +191,26 @@ function describeRoomRecency(stats) {
     return `watered ${stats.daysSinceLastWatering} days ago`;
 }
 
+// Which room cards have their plant list open. Kept outside the markup because moving a
+// plant re-renders every card, which would otherwise collapse the room being worked in.
+const expandedRooms = new Set();
+
+function toggleRoomPlants(roomId, open) {
+    if (open) expandedRooms.add(roomId);
+    else expandedRooms.delete(roomId);
+}
+
 // The room cards list their plants from the cached /plants response rather than
 // fetching per room, the same way the room-watering checklist does.
 function roomPlantRows(roomId) {
     const roomPlants = plants.filter(p => p.roomId === roomId);
-    if (roomPlants.length === 0) return '<p class="empty" style="margin:0;">No plants in this room yet.</p>';
+    if (roomPlants.length === 0) return '<p class="empty">No plants in this room yet.</p>';
     const elsewhere = rooms.filter(r => r.id !== roomId);
     return roomPlants.map(p => `
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; font-size:0.95rem; color:#333;">
-            <span>${escapeHtml(p.name)}${p.location ? ` <span style="color:#888; font-size:0.85rem;">· ${escapeHtml(p.location)}</span>` : ''}</span>
+        <div class="plant-row">
+            <span>${escapeHtml(p.name)}${p.location ? ` <span class="spot">· ${escapeHtml(p.location)}</span>` : ''}</span>
             ${elsewhere.length === 0 ? '' : `
-                <select onchange="movePlantToRoom(${p.id}, ${roomId}, this)"
-                        style="width:auto; margin-top:0; padding:0.25rem; font-size:0.85rem;">
+                <select class="move-select" onchange="movePlantToRoom(${p.id}, ${roomId}, this)">
                     <option value="">Move to…</option>
                     ${elsewhere.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('')}
                 </select>`}
@@ -244,9 +252,11 @@ async function loadRoomStats() {
                         </div>
                     </div>
                     ${overdue}
-                    <div style="display:flex; flex-direction:column; gap:0.35rem;">
+                    <details class="room-plants" ${expandedRooms.has(s.roomId) ? 'open' : ''}
+                             ontoggle="toggleRoomPlants(${s.roomId}, this.open)">
+                        <summary>Plants</summary>
                         ${roomPlantRows(s.roomId)}
-                    </div>
+                    </details>
                     <div id="room-rename-${s.roomId}" style="display:none; gap:0.5rem;">
                         <input type="text" id="room-rename-input-${s.roomId}" value="${escapeHtml(s.name)}"
                                style="flex:1; margin-top:0; padding:0.4rem; font-size:0.9rem;"

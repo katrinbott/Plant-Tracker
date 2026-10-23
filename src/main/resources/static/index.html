@@ -110,6 +110,39 @@
         .qr-btn:hover { background: #f0f8f0; }
         .camera-btn { padding-bottom: 0.3rem; }
 
+        .room-plants > summary {
+            cursor: pointer;
+            color: #2d6a2d;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .plant-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.3rem 0;
+            border-top: 1px solid #eee;
+            font-size: 0.95rem;
+            color: #333;
+        }
+        .plant-row .spot { color: #888; font-size: 0.85rem; }
+        /* A picker that reads as one of the card's buttons rather than a form field. */
+        .move-select {
+            width: auto;
+            margin: 0;
+            height: 1.6rem;
+            padding: 0 0.3rem;
+            background: white;
+            color: #2d6a2d;
+            font-size: 0.8rem;
+            border: 1px solid #2d6a2d;
+            border-radius: 4px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .move-select:hover { background: #f0f8f0; }
+
         #lightbox {
             display: none;
             position: fixed; inset: 0;
