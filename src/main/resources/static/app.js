@@ -120,12 +120,17 @@ function onRoomSelectChange(select) {
     if (creating) document.getElementById(picker.name).focus();
 }
 
-function cancelNewRoom(selectId) {
+function hideNewRoomRow(selectId) {
     const picker = ROOM_PICKERS[selectId];
-    document.getElementById(selectId).value = document.getElementById(selectId).dataset.lastRoom ?? '';
     document.getElementById(picker.row).style.display = 'none';
     document.getElementById(picker.name).value = '';
     document.getElementById(picker.error).textContent = '';
+}
+
+function cancelNewRoom(selectId) {
+    const select = document.getElementById(selectId);
+    select.value = select.dataset.lastRoom ?? '';
+    hideNewRoomRow(selectId);
 }
 
 // Raw fetch rather than apiFetch: a 409 means the room already exists, which is
@@ -399,7 +404,7 @@ async function addPlant(event) {
     try {
         await apiFetch('/plants', { method: 'POST', body: JSON.stringify(body) });
         event.target.reset();
-        cancelNewRoom();
+        hideNewRoomRow('plant-room');
         await loadPlants();
     } catch (e) {
         error.textContent = 'Failed to add plant.';
