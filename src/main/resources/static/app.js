@@ -211,7 +211,6 @@ function describeDaysSince(days) {
 // carries the overdue flag. The spot within the room is not part of the stats, so it is
 // read from the plant cache alongside.
 function roomPlantRows(stats) {
-    if (stats.plants.length === 0) return '<p class="empty">No plants in this room yet.</p>';
     const elsewhere = rooms.filter(r => r.id !== stats.roomId);
     return stats.plants.map(p => {
         const spot = plants.find(cached => cached.id === p.plantId)?.location;
@@ -273,11 +272,12 @@ async function loadRoomStats() {
                         </div>
                     </div>
                     ${overdue}
-                    <details class="room-plants" ${expandedRooms.has(s.roomId) ? 'open' : ''}
-                             ontoggle="toggleRoomPlants(${s.roomId}, this.open)">
-                        <summary>Plants</summary>
-                        ${roomPlantRows(s)}
-                    </details>
+                    ${s.plants.length === 0 ? '' : `
+                        <details class="room-plants" ${expandedRooms.has(s.roomId) ? 'open' : ''}
+                                 ontoggle="toggleRoomPlants(${s.roomId}, this.open)">
+                            <summary>Plants</summary>
+                            ${roomPlantRows(s)}
+                        </details>`}
                     <div id="room-rename-${s.roomId}" style="display:none; gap:0.5rem;">
                         <input type="text" id="room-rename-input-${s.roomId}" value="${escapeHtml(s.name)}"
                                style="flex:1; margin-top:0; padding:0.4rem; font-size:0.9rem;"
