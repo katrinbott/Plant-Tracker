@@ -208,7 +208,7 @@ async function loadRoomStats() {
             ].filter(Boolean).join(' · ');
             const overdue = s.overduePlants.length === 0 ? '' : `
                 <div style="font-size:0.85rem; color:#c0392b;">
-                    Overdue: ${s.overduePlants.map(p =>
+                    Check: ${s.overduePlants.map(p =>
                         `${escapeHtml(p.name)} (${p.daysSinceLastWatering} days, usually every ${p.medianDaysBetweenWaterings.toFixed(1)})`
                     ).join(', ')}
                 </div>`;
@@ -859,6 +859,7 @@ async function loadAnalytics() {
             chartContainer.style.display = 'none';
             tempChartContainer.style.display = 'none';
             statsContainer.style.display = 'none';
+            document.getElementById('analytics-overdue').style.display = 'none';
             list.innerHTML = '<p class="empty">No watering events recorded yet.</p>';
             return;
         }
@@ -940,14 +941,28 @@ async function savePlantLocation() {
     }
 }
 
+// Hedged on purpose: the median is a rhythm, not a rule, and a plant may genuinely not
+// need water yet. A median exists whenever overdue is set, so it is safe to read here.
+function renderOverdueNotice(analytics) {
+    const notice = document.getElementById('analytics-overdue');
+    notice.style.display = analytics.overdue ? 'block' : 'none';
+    if (analytics.overdue) {
+        notice.textContent = `Check if watering is necessary — last watered `
+            + `${analytics.daysSinceLastWatering} days ago, usually every `
+            + `${analytics.medianDaysBetweenWaterings.toFixed(1)}.`;
+    }
+}
+
 function renderStats(analytics, container) {
     const stats = [
         { label: 'Total waterings', value: analytics.totalWaterings },
+        // Marked on the days since, not the median: the median is the plant's normal
+        // rhythm, and it is the time since watering that is out of range.
+        { label: 'Days since last watering', value: analytics.daysSinceLastWatering ?? '—', overdue: analytics.overdue },
+        { label: 'Median days between waterings', value: analytics.medianDaysBetweenWaterings != null ? analytics.medianDaysBetweenWaterings.toFixed(1) : '—' },
         { label: 'Avg. days between waterings', value: analytics.averageDaysBetweenWaterings != null ? analytics.averageDaysBetweenWaterings.toFixed(1) : '—' },
-        // The median decides whether the plant is overdue, so it is the one marked.
-        { label: 'Median days between waterings', value: analytics.medianDaysBetweenWaterings != null ? analytics.medianDaysBetweenWaterings.toFixed(1) : '—', overdue: analytics.overdue },
-        { label: 'Days since last watering', value: analytics.daysSinceLastWatering ?? '—' },
     ];
+    renderOverdueNotice(analytics);
     container.style.display = 'flex';
     container.style.flexWrap = 'wrap';
     container.innerHTML = stats.map(s => `
