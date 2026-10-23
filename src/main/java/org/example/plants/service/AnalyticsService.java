@@ -28,16 +28,21 @@ public class AnalyticsService {
 
         long daysSinceLast = ChronoUnit.DAYS.between(wateringEvents.get(0).getWateredAt().toLocalDate(), LocalDate.now());
 
-        if (wateringEvents.size() < 2) {
-            return new PlantAnalytics(1, null, null, daysSinceLast);
+        // Several waterings on one day count as one: a same-day top-up would otherwise
+        // add a zero gap and drag the median down.
+        List<LocalDate> dates = wateringEvents.stream()
+                .map(event -> event.getWateredAt().toLocalDate())
+                .distinct()
+                .toList();
+
+        if (dates.size() < 2) {
+            return new PlantAnalytics(wateringEvents.size(), null, null, daysSinceLast);
         }
 
-        // Events arrive newest-first, so each gap is the older date subtracted from the
-        // newer one. Calendar days, so the time of day cannot shift a gap.
+        // Dates arrive newest-first, so each gap is the older subtracted from the newer.
         List<Long> gaps = new ArrayList<>();
-        for (int i = 0; i < wateringEvents.size() - 1; i++) {
-            gaps.add(ChronoUnit.DAYS.between(wateringEvents.get(i + 1).getWateredAt().toLocalDate(),
-                    wateringEvents.get(i).getWateredAt().toLocalDate()));
+        for (int i = 0; i < dates.size() - 1; i++) {
+            gaps.add(ChronoUnit.DAYS.between(dates.get(i + 1), dates.get(i)));
         }
 
         double average = gaps.stream().mapToLong(Long::longValue).average().orElseThrow();

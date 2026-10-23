@@ -9,6 +9,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -23,6 +24,38 @@ class AnalyticsServiceTest {
 
     @InjectMocks
     AnalyticsService analyticsService;
+
+    @Test
+    void severalWateringsOnOneDay_countAsOneWhenMeasuringGaps() {
+        LocalDate today = LocalDate.now();
+        when(wateringEventRepository.findByPlant_IdOrderByWateredAtDesc(1L)).thenReturn(List.of(
+                eventAt(today.minusDays(1).atTime(18, 0)),
+                eventAt(today.minusDays(1).atTime(9, 0)),
+                eventAt(today.minusDays(8).atTime(9, 0))
+        ));
+
+        PlantAnalytics result = analyticsService.getAnalyticsForPlant(1L);
+
+        assertThat(result.totalWaterings()).isEqualTo(3);
+        assertThat(result.averageDaysBetweenWaterings()).isEqualTo(7.0);
+        assertThat(result.medianDaysBetweenWaterings()).isEqualTo(7.0);
+    }
+
+    @Test
+    void wateringsOnlyOnOneDay_haveNoGapToMeasure() {
+        LocalDate today = LocalDate.now();
+        when(wateringEventRepository.findByPlant_IdOrderByWateredAtDesc(1L)).thenReturn(List.of(
+                eventAt(today.minusDays(2).atTime(18, 0)),
+                eventAt(today.minusDays(2).atTime(9, 0))
+        ));
+
+        PlantAnalytics result = analyticsService.getAnalyticsForPlant(1L);
+
+        assertThat(result.totalWaterings()).isEqualTo(2);
+        assertThat(result.averageDaysBetweenWaterings()).isNull();
+        assertThat(result.medianDaysBetweenWaterings()).isNull();
+        assertThat(result.daysSinceLastWatering()).isEqualTo(2);
+    }
 
     private WateringEvent eventAt(LocalDateTime time) {
         WateringEvent e = new WateringEvent();
