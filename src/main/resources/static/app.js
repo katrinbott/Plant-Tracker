@@ -983,38 +983,77 @@ function renderStats(analytics, container) {
     `).join('');
 }
 
+// One chart, one y scale. Every watering sits in a gutter below zero, where the axis
+// deliberately shows no value, and the amounts that were recorded sit above the zero line
+// on the ml scale. A watering with an amount therefore appears twice, which is the point:
+// a gutter mark with nothing above it is a watering whose volume was never recorded.
+// Points, never a line, since joining amounts across waterings that have none would draw a
+// slope between numbers that are not a series.
 function renderHistoryChart(events) {
-    // Events arrive newest-first; reverse for chronological order on the chart
     const sorted = [...events].reverse();
+    const amounts = sorted
+        .filter(e => e.amountMl != null)
+        .map(e => ({ x: e.wateredAt, y: e.amountMl, fertilizer: e.fertilizer, note: e.note }));
 
-    if (historyChart) {
-        historyChart.destroy();
-    }
+    // Sized from the data so the gutter stays a thin strip whatever the volumes are, and
+    // has a sane height when no amount was ever recorded.
+    const top = Math.max(0, ...amounts.map(p => p.y)) || 100;
+    const gutter = top * 0.18;
 
-    const ctx = document.getElementById('history-chart').getContext('2d');
-    historyChart = new Chart(ctx, {
-        type: 'line',
+    const waterings = sorted.map(e => ({
+        x: e.wateredAt,
+        y: -gutter / 2,
+        fertilizer: e.fertilizer,
+        note: e.note,
+        amountMl: e.amountMl,
+    }));
+
+    if (historyChart) historyChart.destroy();
+    historyChart = new Chart(document.getElementById('history-chart').getContext('2d'), {
+        type: 'scatter',
         data: {
-            datasets: [{
-                label: 'Amount (ml)',
-                data: sorted.map(e => ({ x: e.wateredAt, y: e.amountMl ?? 0 })),
-                borderColor: '#2d6a2d',
-                backgroundColor: '#2d6a2d',
-                pointRadius: 5,
-                pointHoverRadius: 7,
-                tension: 0,
-            }]
+            datasets: [
+                {
+                    label: 'Amount recorded',
+                    data: amounts,
+                    borderColor: '#2d6a2d',
+                    backgroundColor: '#2d6a2d',
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointStyle: amounts.map(p => p.fertilizer ? 'triangle' : 'circle'),
+                },
+                {
+                    // Hollow rather than a second colour: shape already carries fertilizer,
+                    // and one hue keeps the two rows readable without relying on colour.
+                    label: 'Watering',
+                    data: waterings,
+                    borderColor: '#2d6a2d',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointStyle: waterings.map(p => p.fertilizer ? 'triangle' : 'circle'),
+                },
+            ]
         },
         options: {
             responsive: true,
             plugins: {
-                legend: { display: false },
+                // Boxes rather than point styles: pointStyle is a per-point array here, which
+                // the legend cannot draw. Filled versus hollow distinguishes the two rows.
+                legend: { display: true, position: 'top' },
+                subtitle: {
+                    display: sorted.some(e => e.fertilizer),
+                    position: 'bottom',
+                    text: 'Triangle: watered with fertilizer',
+                },
                 tooltip: {
                     callbacks: {
-                        footer: (items) => {
-                            const e = sorted[items[0].dataIndex];
-                            return e.note ? `Note: ${e.note}` : '';
-                        }
+                        // The gutter row has no value on the axis, so it must not read as one.
+                        label: (item) => item.datasetIndex === 1
+                            ? (item.raw.amountMl != null ? 'Watered' : 'Watered, no amount recorded')
+                            : `${item.raw.y} ml`,
+                        footer: (items) => items[0].raw.note ? `Note: ${items[0].raw.note}` : '',
                     }
                 }
             },
@@ -1025,8 +1064,15 @@ function renderHistoryChart(events) {
                     title: { display: true, text: 'Date' }
                 },
                 y: {
-                    beginAtZero: true,
-                    title: { display: true, text: 'Amount (ml)' }
+                    min: -gutter,
+                    suggestedMax: top,
+                    title: { display: true, text: 'Amount (ml)' },
+                    // The gutter is unlabelled, and zero is drawn as the line dividing the two.
+                    ticks: { callback: (value) => value < 0 ? '' : value },
+                    grid: {
+                        color: (c) => c.tick.value === 0 ? '#9aa89a' : 'rgba(0,0,0,0.1)',
+                        lineWidth: (c) => c.tick.value === 0 ? 2 : 1,
+                    },
                 }
             }
         }
