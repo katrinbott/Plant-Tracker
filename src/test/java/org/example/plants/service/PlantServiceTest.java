@@ -67,6 +67,43 @@ class PlantServiceTest {
     }
 
     @Test
+    void setRoom_assignsRoomAndSaves() {
+        Plant plant = new Plant();
+        when(plantRepository.findById(1L)).thenReturn(Optional.of(plant));
+        when(roomRepository.findById(3L)).thenReturn(Optional.of(new Room("Kitchen")));
+        when(plantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Plant result = plantService.setRoom(1L, 3L);
+
+        assertThat(result.getRoom().getName()).isEqualTo("Kitchen");
+        verify(plantRepository).save(plant);
+    }
+
+    @Test
+    void setRoom_returnsNullWhenPlantNotFound() {
+        when(plantRepository.findById(99L)).thenReturn(Optional.empty());
+        when(roomRepository.findById(3L)).thenReturn(Optional.of(new Room("Kitchen")));
+
+        Plant result = plantService.setRoom(99L, 3L);
+
+        assertThat(result).isNull();
+        verify(plantRepository, never()).save(any());
+    }
+
+    // The sibling case to createPlant_returnsNullWhenRoomDoesNotExist: moving a plant
+    // into a room that is gone must leave the plant where it was, not unassign it.
+    @Test
+    void setRoom_returnsNullWhenRoomNotFound() {
+        when(plantRepository.findById(1L)).thenReturn(Optional.of(new Plant()));
+        when(roomRepository.findById(99L)).thenReturn(Optional.empty());
+
+        Plant result = plantService.setRoom(1L, 99L);
+
+        assertThat(result).isNull();
+        verify(plantRepository, never()).save(any());
+    }
+
+    @Test
     void updateLocation_savesTrimmedLocation() {
         when(plantRepository.findById(1L)).thenReturn(Optional.of(new Plant()));
         when(plantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
