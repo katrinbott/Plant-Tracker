@@ -40,3 +40,5 @@ build/
 
 uploads/
 .env
+# Local review notes, not part of the project
+review-notes.md
