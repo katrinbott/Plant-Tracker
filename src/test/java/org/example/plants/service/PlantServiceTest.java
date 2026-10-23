@@ -1,6 +1,7 @@
 package org.example.plants.service;
 
 import org.example.plants.dto.PlantCreateRequest;
+import org.example.plants.exception.RoomNotFoundException;
 import org.example.plants.model.Plant;
 import org.example.plants.model.PlantImage;
 import org.example.plants.model.Room;
@@ -22,6 +23,7 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -43,13 +45,14 @@ class PlantServiceTest {
     }
 
     @Test
-    void createPlant_returnsNullWhenRoomDoesNotExist() {
+    void createPlant_throwsWhenRoomDoesNotExist() {
         when(roomRepository.findById(99L)).thenReturn(Optional.empty());
 
-        Plant result = plantService.createPlant(
-                new PlantCreateRequest("Monstera", null, null, 99L));
+        assertThatThrownBy(() -> plantService.createPlant(
+                new PlantCreateRequest("Monstera", null, null, 99L)))
+                .isInstanceOf(RoomNotFoundException.class)
+                .hasMessage("Room 99 does not exist.");
 
-        assertThat(result).isNull();
         verify(plantRepository, never()).save(any());
     }
 
@@ -79,10 +82,10 @@ class PlantServiceTest {
         verify(plantRepository).save(plant);
     }
 
+    // No room stub: an unknown plant returns before the room is looked up at all.
     @Test
     void setRoom_returnsNullWhenPlantNotFound() {
         when(plantRepository.findById(99L)).thenReturn(Optional.empty());
-        when(roomRepository.findById(3L)).thenReturn(Optional.of(new Room("Kitchen")));
 
         Plant result = plantService.setRoom(99L, 3L);
 
@@ -90,16 +93,17 @@ class PlantServiceTest {
         verify(plantRepository, never()).save(any());
     }
 
-    // The sibling case to createPlant_returnsNullWhenRoomDoesNotExist: moving a plant
-    // into a room that is gone must leave the plant where it was, not unassign it.
+    // Moving a plant into a room that is gone must leave the plant where it was,
+    // not unassign it.
     @Test
-    void setRoom_returnsNullWhenRoomNotFound() {
+    void setRoom_throwsWhenRoomNotFound() {
         when(plantRepository.findById(1L)).thenReturn(Optional.of(new Plant()));
         when(roomRepository.findById(99L)).thenReturn(Optional.empty());
 
-        Plant result = plantService.setRoom(1L, 99L);
+        assertThatThrownBy(() -> plantService.setRoom(1L, 99L))
+                .isInstanceOf(RoomNotFoundException.class)
+                .hasMessage("Room 99 does not exist.");
 
-        assertThat(result).isNull();
         verify(plantRepository, never()).save(any());
     }
 

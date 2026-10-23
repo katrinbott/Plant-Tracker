@@ -1,6 +1,7 @@
 package org.example.plants.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.example.plants.exception.RoomNotFoundException;
 import org.example.plants.model.Plant;
 import org.example.plants.model.PlantImage;
 import org.example.plants.model.Room;
@@ -74,7 +75,7 @@ class PlantControllerTest {
 
     @Test
     void createPlant_returns400WhenRoomDoesNotExist() throws Exception {
-        when(plantService.createPlant(any())).thenReturn(null);
+        when(plantService.createPlant(any())).thenThrow(new RoomNotFoundException(99L));
 
         mockMvc.perform(post("/plants")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -144,13 +145,25 @@ class PlantControllerTest {
     }
 
     @Test
-    void setRoom_returns404WhenPlantOrRoomNotFound() throws Exception {
+    void setRoom_returns404WhenPlantNotFound() throws Exception {
         when(plantService.setRoom(eq(99L), any())).thenReturn(null);
 
         mockMvc.perform(put("/plants/99/room")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"roomId\": 3}"))
                 .andExpect(status().isNotFound());
+    }
+
+    // The URL names a plant that exists and the body names a room that does not, so
+    // this is a bad request rather than the 404 above.
+    @Test
+    void setRoom_returns400WhenRoomDoesNotExist() throws Exception {
+        when(plantService.setRoom(eq(1L), any())).thenThrow(new RoomNotFoundException(99L));
+
+        mockMvc.perform(put("/plants/1/room")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"roomId\": 99}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

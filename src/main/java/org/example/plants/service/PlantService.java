@@ -1,6 +1,7 @@
 package org.example.plants.service;
 
 import org.example.plants.dto.PlantCreateRequest;
+import org.example.plants.exception.RoomNotFoundException;
 import org.example.plants.model.Plant;
 import org.example.plants.model.PlantImage;
 import org.example.plants.model.Room;
@@ -39,10 +40,10 @@ public class PlantService {
         this.roomRepository = roomRepository;
     }
 
-    /** Returns null when the requested room does not exist; every plant needs one. */
+    /** Every plant needs a room, so an unknown one is rejected rather than ignored. */
     public Plant createPlant(PlantCreateRequest request) {
-        Room room = roomRepository.findById(request.roomId()).orElse(null);
-        if (room == null) return null;
+        Room room = roomRepository.findById(request.roomId())
+                .orElseThrow(() -> new RoomNotFoundException(request.roomId()));
         Plant plant = new Plant();
         plant.setName(request.name());
         plant.setSpecies(request.species());
@@ -51,11 +52,12 @@ public class PlantService {
         return plantRepository.save(plant);
     }
 
-    /** Returns null when either the plant or the target room does not exist. */
+    /** Returns null when the plant does not exist; an unknown room throws instead. */
     public Plant setRoom(Long plantId, Long roomId) {
         Plant plant = plantRepository.findById(plantId).orElse(null);
-        Room room = roomRepository.findById(roomId).orElse(null);
-        if (plant == null || room == null) return null;
+        if (plant == null) return null;
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new RoomNotFoundException(roomId));
         plant.setRoom(room);
         return plantRepository.save(plant);
     }

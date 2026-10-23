@@ -37,11 +37,9 @@ public class PlantController {
     }
 
     @PostMapping
-    public ResponseEntity<Plant> createPlant(@RequestBody @Valid PlantCreateRequest request) {
-        Plant plant = plantService.createPlant(request);
-        return plant != null
-                ? ResponseEntity.status(HttpStatus.CREATED).body(plant)
-                : ResponseEntity.badRequest().build();
+    @ResponseStatus(HttpStatus.CREATED)
+    public Plant createPlant(@RequestBody @Valid PlantCreateRequest request) {
+        return plantService.createPlant(request);
     }
 
     @GetMapping

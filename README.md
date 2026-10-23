@@ -100,8 +100,8 @@ Returns the updated plant, or `404` if the plant doesn't exist. A blank `locatio
   "roomId": 3
 }
 ```
-Returns the updated plant, `400` if `roomId` is null, or `404` if the plant or room
-doesn't exist.
+Returns the updated plant, `400` if `roomId` is null or names a room that doesn't
+exist, or `404` if the plant doesn't exist.
 
 ### Photos
 

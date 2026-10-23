@@ -139,7 +139,7 @@ INDEX idx_watering_events_watered_at ON watering_events(watered_at)
 | `GET` | `/plants` | List all plants | `200` + plant array |
 | `POST` | `/plants` | Create a plant | `201` + plant, `400` if the room is missing or unknown |
 | `PATCH` | `/plants/{id}` | Update the spot within the room | `200` + plant, `404` |
-| `PUT` | `/plants/{id}/room` | Move the plant to another room | `200` + plant, `400` if null, `404` |
+| `PUT` | `/plants/{id}/room` | Move the plant to another room | `200` + plant, `400` if `roomId` is null or unknown, `404` if the plant is unknown |
 | `DELETE` | `/plants/{id}` | Delete a plant | `204` |
 | `GET` | `/plants/{id}/qr` | PNG QR code linking to the quick-watering page | `200` + image |
 | `POST` | `/plants/{id}/images` | Upload a photo (multipart `file`, optional `note`) | `201` + image |
