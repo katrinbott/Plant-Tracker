@@ -1057,6 +1057,20 @@ function renderStats(analytics, container) {
 // a gutter mark with nothing above it is a watering whose volume was never recorded.
 // Points, never a line, since joining amounts across waterings that have none would draw a
 // slope between numbers that are not a series.
+// Waterings on one day span a few hours, which the time axis would stretch across the full
+// width under day-formatted ticks — making a single day read as several. Padding the window
+// out to a minimum keeps same-day events visibly together. Returns nothing when the data
+// already spans longer, leaving min and max undefined so the axis fits the data.
+function timeAxisWindow(events) {
+    const MIN_SPAN_MS = 3 * 24 * 60 * 60 * 1000;
+    const times = events.map(e => new Date(e.wateredAt).getTime());
+    const first = Math.min(...times);
+    const last = Math.max(...times);
+    const shortfall = MIN_SPAN_MS - (last - first);
+    if (shortfall <= 0) return {};
+    return { min: first - shortfall / 2, max: last + shortfall / 2 };
+}
+
 function renderHistoryChart(events) {
     const sorted = [...events].reverse();
     const amounts = sorted
@@ -1129,6 +1143,7 @@ function renderHistoryChart(events) {
                 x: {
                     type: 'time',
                     time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                    ...timeAxisWindow(sorted),
                     title: { display: true, text: 'Date' }
                 },
                 y: {
@@ -1201,6 +1216,7 @@ function renderTemperatureChart(events) {
                 x: {
                     type: 'time',
                     time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                    ...timeAxisWindow(sorted),
                     title: { display: true, text: 'Date' }
                 },
                 y: {
