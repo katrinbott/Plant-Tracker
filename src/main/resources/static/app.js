@@ -419,8 +419,9 @@ async function loadPlants() {
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <div class="card-info">
                             <strong onclick="openPlantAnalytics(${p.id})" title="Show this plant's analytics"
-                                    style="cursor:pointer;">${p.name}</strong>
-                            <span>${[p.species, escapeHtml(roomName(p.roomId) ?? ''), p.location].filter(Boolean).join(' · ')}</span>
+                                    style="cursor:pointer;">${escapeHtml(p.name)}</strong>
+                            <span>${[p.species, roomName(p.roomId), p.location]
+                                .filter(Boolean).map(escapeHtml).join(' · ')}</span>
                         </div>
                         <div style="display:flex; gap:0.5rem; align-items:center;">
                             <label class="qr-btn camera-btn" title="Upload photo" style="cursor:pointer;">
@@ -603,7 +604,7 @@ function renderSlideshow() {
             </div>
             ${img.note ? `
             <div style="padding:0.5rem 0.75rem; border-top:1px solid #f0f0f0; font-size:0.9rem; color:#555;">
-                ${img.note}
+                ${escapeHtml(img.note)}
             </div>` : ''}
         </div>
     `;
@@ -627,11 +628,12 @@ async function loadWateringEvents() {
                 const weather = e.minTemperatureC != null
                     ? `${e.minTemperatureC}°C / ${e.maxTemperatureC}°C  · ${WEATHER_CODES[e.weatherCode] ?? 'Unknown'}`
                     : null;
-                const details = [e.amountMl ? `${e.amountMl} ml` : null, e.fertilizer ? 'fertilized' : null, e.note, weather].filter(Boolean).join(' · ');
+                const details = [e.amountMl ? `${e.amountMl} ml` : null, e.fertilizer ? 'fertilized' : null,
+                    e.note ? escapeHtml(e.note) : null, weather].filter(Boolean).join(' · ');
                 return `
                     <div class="card">
                         <div class="card-info">
-                            <strong>${plant ? plant.name : 'Unknown plant'}</strong>
+                            <strong>${plant ? escapeHtml(plant.name) : 'Unknown plant'}</strong>
                             <span>${date}${details ? ' · ' + details : ''}</span>
                         </div>
                         <button class="delete-btn" onclick="deleteWateringEvent(${e.id})" title="Delete">✕</button>
@@ -904,7 +906,7 @@ function populatePlantDropdown() {
     const select = document.getElementById('watering-plant');
     select.innerHTML = plants.length === 0
         ? '<option value="">No plants available</option>'
-        : plants.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        : plants.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
     if (plants.some(p => p.id == selectedWateringPlantId)) select.value = selectedWateringPlantId;
 }
 
@@ -917,7 +919,7 @@ function populateAnalyticsDropdown() {
     const select = document.getElementById('analytics-plant');
     select.innerHTML = plants.length === 0
         ? '<option value="">No plants available</option>'
-        : plants.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        : plants.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
     if (plants.some(p => p.id == selectedAnalyticsPlantId)) select.value = selectedAnalyticsPlantId;
 }
 
@@ -961,7 +963,8 @@ async function loadAnalytics() {
 
         list.innerHTML = events.map(e => {
             const date = new Date(e.wateredAt).toLocaleString();
-            const details = [e.amountMl ? `${e.amountMl} ml` : null, e.fertilizer ? 'fertilized' : null, e.note].filter(Boolean).join(' · ');
+            const details = [e.amountMl ? `${e.amountMl} ml` : null, e.fertilizer ? 'fertilized' : null,
+                e.note ? escapeHtml(e.note) : null].filter(Boolean).join(' · ');
             return `
                 <div class="card">
                     <div class="card-info">
