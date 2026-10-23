@@ -221,7 +221,7 @@ function roomPlantRows(stats) {
                         title="Show this plant's analytics">${escapeHtml(p.name)}</span>${spot ? ` <span class="spot">· ${escapeHtml(spot)}</span>` : ''}</span>
             <span class="plant-row-right">
                 <span class="days${p.overdue ? ' overdue' : ''}"
-                      ${p.overdue ? `title="Longer than its usual ${p.medianDaysBetweenWaterings.toFixed(1)} days — worth checking"` : ''}>${describeDaysSince(p.daysSinceLastWatering)}</span>
+                      ${p.overdue ? `title="Usually every ${p.medianDaysBetweenWaterings.toFixed(1)} days"` : ''}>${describeDaysSince(p.daysSinceLastWatering)}</span>
                 ${elsewhere.length === 0 ? '' : `
                     <select class="move-select" onchange="movePlantToRoom(${p.plantId}, ${stats.roomId}, this)">
                         <option value="">Move to…</option>
@@ -247,12 +247,12 @@ async function loadRoomStats() {
                 s.averageDaysBetweenWaterings !== null
                     ? `avg every ${s.averageDaysBetweenWaterings.toFixed(1)} days` : null,
             ].filter(Boolean).join(' · ');
+            // Names only: the days and the usual interval are on the plant's own row below,
+            // and spelling them out here made a room with several overdue plants unreadable.
             const overduePlants = s.plants.filter(p => p.overdue);
             const overdue = overduePlants.length === 0 ? '' : `
                 <div style="font-size:0.85rem; color:#c0392b;">
-                    Check: ${overduePlants.map(p =>
-                        `${escapeHtml(p.name)} (${p.daysSinceLastWatering} days, usually every ${p.medianDaysBetweenWaterings.toFixed(1)})`
-                    ).join(', ')}
+                    Check: ${overduePlants.map(p => escapeHtml(p.name)).join(', ')}
                 </div>`;
             return `
                 <div class="card" style="flex-direction:column; align-items:stretch; gap:0.5rem;">
