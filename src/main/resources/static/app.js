@@ -208,7 +208,8 @@ function roomPlantRows(roomId) {
     const elsewhere = rooms.filter(r => r.id !== roomId);
     return roomPlants.map(p => `
         <div class="plant-row">
-            <span>${escapeHtml(p.name)}${p.location ? ` <span class="spot">· ${escapeHtml(p.location)}</span>` : ''}</span>
+            <span><span class="plant-link" onclick="openPlantAnalytics(${p.id})"
+                        title="Show this plant's analytics">${escapeHtml(p.name)}</span>${p.location ? ` <span class="spot">· ${escapeHtml(p.location)}</span>` : ''}</span>
             ${elsewhere.length === 0 ? '' : `
                 <select class="move-select" onchange="movePlantToRoom(${p.id}, ${roomId}, this)">
                     <option value="">Move to…</option>
