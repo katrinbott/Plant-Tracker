@@ -180,7 +180,11 @@ function selectCreatedRoom(selectId, roomId) {
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
-    return div.innerHTML;
+    // The div covers &, < and > — all innerHTML needs for text. Quotes are on us, because
+    // these strings also land inside attributes (the room rename field's value), where a
+    // quote in a name would close the attribute early. Done after the div, so the & we
+    // introduce here is not escaped again.
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function describeRoomRecency(stats) {
