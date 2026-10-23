@@ -107,6 +107,16 @@ class WateringControllerTest {
     }
 
     @Test
+    void recordWateringForPlants_returns400WhenAPlantIdIsNull() throws Exception {
+        mockMvc.perform(post("/watering/bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"plantIds\": [null]}"))
+                .andExpect(status().isBadRequest());
+
+        verify(wateringService, never()).recordWateringForPlants(any(), any(), anyBoolean());
+    }
+
+    @Test
     void recordWateringForPlants_returns400WhenAnyPlantIsUnknown() throws Exception {
         when(wateringService.recordWateringForPlants(any(), any(), anyBoolean()))
                 .thenReturn(null);

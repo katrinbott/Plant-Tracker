@@ -111,6 +111,22 @@ class WateringServiceTest {
         verify(weatherService, times(1)).fetchCurrent();
     }
 
+    // Duplicates are rejected by the same size comparison as unknown ids, because
+    // findAllById queries WHERE id IN (...) and so returns one row per distinct id.
+    // With the repository mocked this pins the service's half of that: fewer rows back
+    // than ids asked for means reject.
+    @Test
+    void recordWateringForPlants_returnsNullWhenAnIdIsDuplicated() {
+        when(plantRepository.findAllById(List.of(1L, 1L))).thenReturn(List.of(new Plant()));
+
+        List<WateringEvent> result =
+                wateringService.recordWateringForPlants(List.of(1L, 1L), null, false);
+
+        assertThat(result).isNull();
+        verify(wateringEventRepository, never()).saveAll(any());
+        verify(weatherService, never()).fetchCurrent();
+    }
+
     @Test
     void recordWateringForPlants_returnsNullWhenAnyPlantIsUnknown() {
         when(plantRepository.findAllById(List.of(1L, 99L))).thenReturn(List.of(new Plant()));
