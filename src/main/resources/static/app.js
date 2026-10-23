@@ -221,7 +221,7 @@ function roomPlantRows(stats) {
                         title="Show this plant's analytics">${escapeHtml(p.name)}</span>${spot ? ` <span class="spot">· ${escapeHtml(spot)}</span>` : ''}</span>
             <span class="plant-row-right">
                 <span class="days${p.overdue ? ' overdue' : ''}"
-                      ${p.overdue ? `title="Usually every ${p.medianDaysBetweenWaterings.toFixed(1)} days"` : ''}>${describeDaysSince(p.daysSinceLastWatering)}</span>
+                      ${p.medianDaysBetweenWaterings != null ? `title="Usually every ${p.medianDaysBetweenWaterings.toFixed(1)} days"` : ''}>${describeDaysSince(p.daysSinceLastWatering)}</span>
                 ${elsewhere.length === 0 ? '' : `
                     <select class="move-select" onchange="movePlantToRoom(${p.plantId}, ${stats.roomId}, this)">
                         <option value="">Move to…</option>
