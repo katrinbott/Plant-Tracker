@@ -218,13 +218,16 @@ Response:
   "totalWaterings": 5,
   "averageDaysBetweenWaterings": 11.25,
   "medianDaysBetweenWaterings": 5.0,
-  "daysSinceLastWatering": 6
+  "daysSinceLastWatering": 6,
+  "overdue": true
 }
 ```
-Both intervals are `null` until a plant has two waterings, and gaps are counted in calendar
-days. The average describes the overall history; the median is what decides whether a plant
-is overdue, because one forgotten stretch would otherwise raise the bar — as in the example
-above, where the real rhythm is five days.
+Both intervals are `null` until a plant has two waterings on separate days, and gaps are
+counted between distinct calendar dates, so watering twice in one day counts once. The
+average describes the overall history; `overdue` is `true` when the days since the last
+watering exceed the *median*, because one forgotten stretch would otherwise raise the bar —
+as in the example above, where the real rhythm is five days. The Analytics tab marks the
+median tile red when it is set.
 
 ### Settings
 

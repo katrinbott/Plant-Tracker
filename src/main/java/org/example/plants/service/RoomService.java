@@ -100,11 +100,7 @@ public class RoomService {
                 averageTotal += average;
                 averageCount++;
             }
-            // Measured against the median, not the mean: a single forgotten stretch
-            // would otherwise raise the bar and hide a plant that is genuinely due.
-            // Both are null until a plant has two waterings, so a new plant is never
-            // called overdue.
-            if (median != null && since != null && since > median) {
+            if (analytics.overdue()) {
                 overdue.add(new OverduePlant(plant.getId(), plant.getName(), since, median));
             }
         }

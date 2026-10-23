@@ -4,5 +4,6 @@ public record PlantAnalytics(
         int totalWaterings,
         Double averageDaysBetweenWaterings,
         Double medianDaysBetweenWaterings,
-        Long daysSinceLastWatering
+        Long daysSinceLastWatering,
+        boolean overdue
 ) {}

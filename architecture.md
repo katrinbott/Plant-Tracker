@@ -48,7 +48,7 @@ org.example.plants
     ├── PlantCreateRequest.java      # name, species, location, roomId
     ├── WaterCreateRequest.java      # nested WateringRequest(plantId, amountMl, note, fertilizer)
     ├── BulkWateringRequest.java     # plantIds, note, fertilizer — no amount, see below
-    ├── PlantAnalytics.java          # totalWaterings, average/median interval, daysSinceLast
+    ├── PlantAnalytics.java          # totalWaterings, average/median interval, daysSinceLast, overdue
     ├── RoomCreateRequest.java       # name
     ├── RoomStats.java               # roomId, name, plantCount, daysSinceLast, average, overdue
     └── OverduePlant.java            # plantId, name, daysSinceLast, medianDaysBetweenWaterings
@@ -202,11 +202,12 @@ as a whole if any id is unknown or repeated, rather than watering a subset.
 
 ```json
 { "totalWaterings": 5, "averageDaysBetweenWaterings": 11.25,
-  "medianDaysBetweenWaterings": 5.0, "daysSinceLastWatering": 2 }
+  "medianDaysBetweenWaterings": 5.0, "daysSinceLastWatering": 2, "overdue": false }
 ```
 
-Both intervals are `null` until a plant has two waterings. Gaps are measured in calendar
-days, so the time of day cannot shift them.
+Both intervals are `null` until a plant has two waterings on separate days. Gaps are measured
+between distinct calendar dates, so neither the time of day nor a second watering on the same
+day can shift them.
 
 ### Settings — `/settings`
 
@@ -231,8 +232,9 @@ variables when no row exists yet.
   frontend resolves names from its own cached `/rooms` and `/plants` lists.
 - **Median decides whether a plant is due.** Forgetting one plant for a month drags its
   average up, so a five day rhythm with one thirty day lapse averages eleven and looks
-  healthy. `RoomStats` therefore flags overdue plants against the median, while still
-  reporting the average as a description of overall history.
+  healthy. `AnalyticsService` therefore derives `overdue` from the median, while still
+  reporting the average as a description of overall history. The flag belongs to the plant,
+  not the room: `RoomService` and the Analytics tab both read it rather than re-deriving it.
 - **One weather lookup per watering round.** `WateringService` fetches weather once for a
   bulk request and shares it across every event, so a room of six makes one Open-Meteo call
   and all its events carry identical readings.

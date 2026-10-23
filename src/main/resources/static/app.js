@@ -944,12 +944,15 @@ function renderStats(analytics, container) {
     const stats = [
         { label: 'Total waterings', value: analytics.totalWaterings },
         { label: 'Avg. days between waterings', value: analytics.averageDaysBetweenWaterings != null ? analytics.averageDaysBetweenWaterings.toFixed(1) : '—' },
+        // The median decides whether the plant is overdue, so it is the one marked.
+        { label: 'Median days between waterings', value: analytics.medianDaysBetweenWaterings != null ? analytics.medianDaysBetweenWaterings.toFixed(1) : '—', overdue: analytics.overdue },
         { label: 'Days since last watering', value: analytics.daysSinceLastWatering ?? '—' },
     ];
     container.style.display = 'flex';
+    container.style.flexWrap = 'wrap';
     container.innerHTML = stats.map(s => `
         <div style="flex:1; background:white; padding:1rem; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); text-align:center;">
-            <div style="font-size:1.5rem; font-weight:bold; color:#2d6a2d;">${s.value}</div>
+            <div style="font-size:1.5rem; font-weight:bold; color:${s.overdue ? '#c0392b' : '#2d6a2d'};">${s.value}</div>
             <div style="font-size:0.8rem; color:#666; margin-top:0.25rem;">${s.label}</div>
         </div>
     `).join('');

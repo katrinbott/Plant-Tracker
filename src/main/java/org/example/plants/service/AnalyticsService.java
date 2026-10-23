@@ -23,7 +23,7 @@ public class AnalyticsService {
         List<WateringEvent> wateringEvents = wateringEventRepository.findByPlant_IdOrderByWateredAtDesc(plantId);
 
         if (wateringEvents.isEmpty()) {
-            return new PlantAnalytics(0, null, null, null);
+            return new PlantAnalytics(0, null, null, null, false);
         }
 
         long daysSinceLast = ChronoUnit.DAYS.between(wateringEvents.get(0).getWateredAt().toLocalDate(), LocalDate.now());
@@ -36,7 +36,7 @@ public class AnalyticsService {
                 .toList();
 
         if (dates.size() < 2) {
-            return new PlantAnalytics(wateringEvents.size(), null, null, daysSinceLast);
+            return new PlantAnalytics(wateringEvents.size(), null, null, daysSinceLast, false);
         }
 
         // Dates arrive newest-first, so each gap is the older subtracted from the newer.
@@ -46,8 +46,13 @@ public class AnalyticsService {
         }
 
         double average = gaps.stream().mapToLong(Long::longValue).average().orElseThrow();
+        double median = median(gaps);
 
-        return new PlantAnalytics(wateringEvents.size(), average, median(gaps), daysSinceLast);
+        // Due is measured against the median, not the mean: one forgotten stretch would
+        // otherwise raise the bar and hide a plant that is genuinely due.
+        boolean overdue = daysSinceLast > median;
+
+        return new PlantAnalytics(wateringEvents.size(), average, median, daysSinceLast, overdue);
     }
 
     /**

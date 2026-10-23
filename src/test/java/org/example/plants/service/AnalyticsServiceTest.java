@@ -57,6 +57,53 @@ class AnalyticsServiceTest {
         assertThat(result.daysSinceLastWatering()).isEqualTo(2);
     }
 
+    // gaps 5, 5, 5, 30 — mean 11.25, median 5. Last watered 8 days ago, so the mean
+    // would call this plant fine.
+    @Test
+    void overdue_isJudgedByTheMedianNotTheMean() {
+        LocalDate today = LocalDate.now();
+        when(wateringEventRepository.findByPlant_IdOrderByWateredAtDesc(1L)).thenReturn(List.of(
+                eventAt(today.minusDays(8).atTime(9, 0)),
+                eventAt(today.minusDays(13).atTime(9, 0)),
+                eventAt(today.minusDays(18).atTime(9, 0)),
+                eventAt(today.minusDays(23).atTime(9, 0)),
+                eventAt(today.minusDays(53).atTime(9, 0))
+        ));
+
+        PlantAnalytics result = analyticsService.getAnalyticsForPlant(1L);
+
+        assertThat(result.averageDaysBetweenWaterings()).isEqualTo(11.25);
+        assertThat(result.medianDaysBetweenWaterings()).isEqualTo(5.0);
+        assertThat(result.overdue()).isTrue();
+    }
+
+    @Test
+    void notOverdue_whenWateredExactlyOnTheMedian() {
+        LocalDate today = LocalDate.now();
+        when(wateringEventRepository.findByPlant_IdOrderByWateredAtDesc(1L)).thenReturn(List.of(
+                eventAt(today.minusDays(5).atTime(9, 0)),
+                eventAt(today.minusDays(10).atTime(9, 0)),
+                eventAt(today.minusDays(15).atTime(9, 0))
+        ));
+
+        PlantAnalytics result = analyticsService.getAnalyticsForPlant(1L);
+
+        assertThat(result.medianDaysBetweenWaterings()).isEqualTo(5.0);
+        assertThat(result.overdue()).isFalse();
+    }
+
+    @Test
+    void notOverdue_whenThereIsNoMedianYet() {
+        LocalDate today = LocalDate.now();
+        when(wateringEventRepository.findByPlant_IdOrderByWateredAtDesc(1L))
+                .thenReturn(List.of(eventAt(today.minusDays(40).atTime(9, 0))));
+
+        PlantAnalytics result = analyticsService.getAnalyticsForPlant(1L);
+
+        assertThat(result.medianDaysBetweenWaterings()).isNull();
+        assertThat(result.overdue()).isFalse();
+    }
+
     private WateringEvent eventAt(LocalDateTime time) {
         WateringEvent e = new WateringEvent();
         e.setWateredAt(time);

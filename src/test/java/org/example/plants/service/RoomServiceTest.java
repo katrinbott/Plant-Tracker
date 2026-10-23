@@ -102,8 +102,8 @@ class RoomServiceTest {
         when(roomRepository.findAllByOrderByNameAsc()).thenReturn(List.of(room));
         when(plantRepository.findByRoom_Id(1L))
                 .thenReturn(List.of(plant(10L, "Monstera"), plant(11L, "Pothos")));
-        when(analyticsService.getAnalyticsForPlant(10L)).thenReturn(new PlantAnalytics(5, 7.0, 7.0, 2L));
-        when(analyticsService.getAnalyticsForPlant(11L)).thenReturn(new PlantAnalytics(4, 5.0, 5.0, 4L));
+        when(analyticsService.getAnalyticsForPlant(10L)).thenReturn(new PlantAnalytics(5, 7.0, 7.0, 2L, false));
+        when(analyticsService.getAnalyticsForPlant(11L)).thenReturn(new PlantAnalytics(4, 5.0, 5.0, 4L, false));
 
         RoomStats stats = roomService.getRoomStats().get(0);
 
@@ -122,8 +122,8 @@ class RoomServiceTest {
         when(roomRepository.findAllByOrderByNameAsc()).thenReturn(List.of(room));
         when(plantRepository.findByRoom_Id(1L))
                 .thenReturn(List.of(plant(10L, "Monstera"), plant(11L, "Pothos")));
-        when(analyticsService.getAnalyticsForPlant(10L)).thenReturn(new PlantAnalytics(5, 7.0, 7.0, 9L));
-        when(analyticsService.getAnalyticsForPlant(11L)).thenReturn(new PlantAnalytics(4, 5.0, 5.0, 20L));
+        when(analyticsService.getAnalyticsForPlant(10L)).thenReturn(new PlantAnalytics(5, 7.0, 7.0, 9L, true));
+        when(analyticsService.getAnalyticsForPlant(11L)).thenReturn(new PlantAnalytics(4, 5.0, 5.0, 20L, true));
 
         RoomStats stats = roomService.getRoomStats().get(0);
 
@@ -131,16 +131,16 @@ class RoomServiceTest {
                 .containsExactly("Pothos", "Monstera");
     }
 
+    // Whether a plant is overdue is decided in AnalyticsService; see its tests. What
+    // matters here is that the entry reports the median rather than the mean.
     @Test
-    void getRoomStats_judgesOverdueByMedianNotAverage() {
+    void getRoomStats_overdueEntryCarriesTheMedian() {
         Room room = new Room("Living room");
         room.setId(1L);
         when(roomRepository.findAllByOrderByNameAsc()).thenReturn(List.of(room));
         when(plantRepository.findByRoom_Id(1L)).thenReturn(List.of(plant(10L, "Monstera")));
-        // Forgotten once, so the mean sits at 11.25 while the real rhythm is 5 days.
-        // Measured against the mean this plant looks fine; against the median it is due.
         when(analyticsService.getAnalyticsForPlant(10L))
-                .thenReturn(new PlantAnalytics(5, 11.25, 5.0, 8L));
+                .thenReturn(new PlantAnalytics(5, 11.25, 5.0, 8L, true));
 
         RoomStats stats = roomService.getRoomStats().get(0);
 
@@ -149,24 +149,24 @@ class RoomServiceTest {
     }
 
     @Test
-    void getRoomStats_doesNotFlagPlantWateredExactlyOnMedian() {
+    void getRoomStats_omitsPlantsNotFlaggedOverdue() {
         Room room = new Room("Kitchen");
         room.setId(2L);
         when(roomRepository.findAllByOrderByNameAsc()).thenReturn(List.of(room));
         when(plantRepository.findByRoom_Id(2L)).thenReturn(List.of(plant(20L, "Basil")));
-        when(analyticsService.getAnalyticsForPlant(20L)).thenReturn(new PlantAnalytics(2, 7.0, 7.0, 7L));
+        when(analyticsService.getAnalyticsForPlant(20L)).thenReturn(new PlantAnalytics(2, 7.0, 7.0, 7L, false));
 
         assertThat(roomService.getRoomStats().get(0).overduePlants()).isEmpty();
     }
 
     @Test
-    void getRoomStats_neverFlagsPlantWithTooFewWateringsAndReportsNullAverage() {
+    void getRoomStats_reportsNullAverageWhenAPlantHasTooFewWaterings() {
         Room room = new Room("Balcony");
         room.setId(3L);
         when(roomRepository.findAllByOrderByNameAsc()).thenReturn(List.of(room));
         when(plantRepository.findByRoom_Id(3L)).thenReturn(List.of(plant(30L, "Lavender")));
         // One watering, so there is no average interval to be overdue against.
-        when(analyticsService.getAnalyticsForPlant(30L)).thenReturn(new PlantAnalytics(1, null, null, 40L));
+        when(analyticsService.getAnalyticsForPlant(30L)).thenReturn(new PlantAnalytics(1, null, null, 40L, false));
 
         RoomStats stats = roomService.getRoomStats().get(0);
 
@@ -181,7 +181,7 @@ class RoomServiceTest {
         room.setId(4L);
         when(roomRepository.findAllByOrderByNameAsc()).thenReturn(List.of(room));
         when(plantRepository.findByRoom_Id(4L)).thenReturn(List.of(plant(40L, "Tomato")));
-        when(analyticsService.getAnalyticsForPlant(40L)).thenReturn(new PlantAnalytics(0, null, null, null));
+        when(analyticsService.getAnalyticsForPlant(40L)).thenReturn(new PlantAnalytics(0, null, null, null, false));
 
         RoomStats stats = roomService.getRoomStats().get(0);
 
