@@ -106,8 +106,8 @@ function renderRoomOptions() {
 function setRoomSelection(selectId, value) {
     const select = document.getElementById(selectId);
     select.value = value ?? '';
-    // Remembered so cancelling "+ New room…" can put the previous choice back
-    // instead of silently leaving the plant with no room.
+    // Kept in step with the select, so cancelling "+ New room…" restores this choice
+    // rather than blanking the field.
     select.dataset.lastRoom = select.value;
 }
 
@@ -477,6 +477,10 @@ async function addPlant(event) {
     try {
         await apiFetch('/plants', { method: 'POST', body: JSON.stringify(body) });
         event.target.reset();
+        // The name, species and spot belonged to the plant just added, but the room is the
+        // context being worked in: several plants usually go into one room in a sitting.
+        // It also keeps the select and lastRoom in agreement, which reset() would break.
+        setRoomSelection('plant-room', roomId);
         hideNewRoomRow('plant-room');
         await loadPlants();
     } catch (e) {
