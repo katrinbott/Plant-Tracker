@@ -160,7 +160,6 @@ PUT /plants/{id}/room  { "roomId": 3 }                   // null is rejected
 |---|---|---|---|
 | `GET` | `/rooms` | List rooms, by name | `200` + room array |
 | `GET` | `/rooms/stats` | Per-room statistics | `200` + stats array |
-| `GET` | `/rooms/{id}/plants` | Plants in a room | `200` + plant array |
 | `POST` | `/rooms` | Create a room | `201` + room, `400` blank, `409` duplicate |
 | `PATCH` | `/rooms/{id}` | Rename a room | `200` + room, `404`, `409` duplicate |
 | `DELETE` | `/rooms/{id}` | Delete an empty room | `204`, `404`, `409` if it still has plants |

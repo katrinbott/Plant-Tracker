@@ -3,7 +3,6 @@ package org.example.plants.controller;
 import jakarta.validation.Valid;
 import org.example.plants.dto.RoomCreateRequest;
 import org.example.plants.dto.RoomStats;
-import org.example.plants.model.Plant;
 import org.example.plants.model.Room;
 import org.example.plants.service.RoomService;
 import org.springframework.http.HttpStatus;
@@ -57,10 +56,5 @@ public class RoomController {
     @GetMapping("/stats")
     public List<RoomStats> getRoomStats() {
         return roomService.getRoomStats();
-    }
-
-    @GetMapping("/{id}/plants")
-    public List<Plant> getPlantsInRoom(@PathVariable Long id) {
-        return roomService.getPlantsInRoom(id);
     }
 }

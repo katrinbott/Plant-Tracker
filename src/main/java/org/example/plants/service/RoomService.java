@@ -69,10 +69,6 @@ public class RoomService {
         return true;
     }
 
-    public List<Plant> getPlantsInRoom(Long roomId) {
-        return plantRepository.findByRoom_Id(roomId);
-    }
-
     public List<RoomStats> getRoomStats() {
         return getAllRooms().stream().map(this::statsFor).toList();
     }

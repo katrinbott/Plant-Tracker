@@ -135,7 +135,6 @@ row and the file.
 |--------|------|-------------|
 | `GET` | `/rooms` | List all rooms |
 | `GET` | `/rooms/stats` | Per-room statistics |
-| `GET` | `/rooms/{id}/plants` | Plants in a room |
 | `POST` | `/rooms` | Create a room |
 | `PATCH` | `/rooms/{id}` | Rename a room |
 | `DELETE` | `/rooms/{id}` | Delete an empty room |
