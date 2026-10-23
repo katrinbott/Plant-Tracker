@@ -46,25 +46,13 @@ public class AnalyticsService {
         }
 
         double average = gaps.stream().mapToLong(Long::longValue).average().orElseThrow();
-        double median = median(gaps);
+        double median = Medians.of(gaps.stream().map(Long::doubleValue).toList());
 
         // Due is measured against the median, not the mean: one forgotten stretch would
         // otherwise raise the bar and hide a plant that is genuinely due.
         boolean overdue = daysSinceLast > median;
 
         return new PlantAnalytics(wateringEvents.size(), average, median, daysSinceLast, overdue);
-    }
-
-    /**
-     * The median gap is what tells you whether a plant is due: one stretch where it was
-     * forgotten drags the mean up and would make a thirsty plant look fine.
-     */
-    private double median(List<Long> gaps) {
-        List<Long> sorted = gaps.stream().sorted().toList();
-        int middle = sorted.size() / 2;
-        return sorted.size() % 2 == 1
-                ? sorted.get(middle)
-                : (sorted.get(middle - 1) + sorted.get(middle)) / 2.0;
     }
 }
 

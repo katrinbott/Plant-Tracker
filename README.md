@@ -13,7 +13,7 @@ A Spring Boot app for tracking houseplants, their watering history, and photos, 
 
 - Organise plants into rooms, with a free-text spot within the room such as "windowsill"
 - Water a whole room in one action, unticking any plant you skipped
-- Rooms tab with per-room plant count, last watered, average interval, and which plants are overdue, i.e. need to be checked
+- Rooms tab with per-room plant count, last watered, median and average interval, and which plants are overdue, i.e. need to be checked
 - Each room card lists its plants, longest-unwatered first, each with its days since watering
   and a picker to move it to another room
 - Add and delete plants; move a plant to another room from the Rooms or Analytics tab
@@ -158,6 +158,7 @@ has plants also returns `409` — move them to another room first.
     "plantCount": 3,
     "daysSinceLastWatering": 2,
     "averageDaysBetweenWaterings": 6.0,
+    "medianDaysBetweenWaterings": 5.0,
     "plants": [
       {
         "plantId": 11,
@@ -170,6 +171,12 @@ has plants also returns `409` — move them to another room first.
   }
 ]
 ```
+Both room intervals count each plant once, however often it is watered, so a cactus counts
+as much as a fern: they answer how often watering happens in this room. The median is the
+median of the plants' medians, and it is reported alongside the average because `overdue` is
+judged by a median — a card showing only the average would explain its own warnings in the
+wrong units.
+
 A room counts as watered when its most recently watered plant was — the room's rhythm. The
 `plants` list is the other view: every plant in the room, ordered longest-unwatered first,
 with one never watered sorting above them all, since "never" is longer ago than any number

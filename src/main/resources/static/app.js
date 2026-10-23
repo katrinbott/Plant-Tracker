@@ -246,6 +246,10 @@ async function loadRoomStats() {
             const summary = [
                 s.plantCount === 1 ? '1 plant' : `${s.plantCount} plants`,
                 describeRoomRecency(s),
+                // Median first: it is the rule the "Check" line below is judged by, so the
+                // card would otherwise explain its own warnings in the other number's units.
+                s.medianDaysBetweenWaterings !== null
+                    ? `median every ${s.medianDaysBetweenWaterings.toFixed(1)} days` : null,
                 s.averageDaysBetweenWaterings !== null
                     ? `avg every ${s.averageDaysBetweenWaterings.toFixed(1)} days` : null,
             ].filter(Boolean).join(' · ');

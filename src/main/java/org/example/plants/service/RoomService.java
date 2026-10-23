@@ -78,6 +78,7 @@ public class RoomService {
     private RoomStats statsFor(Room room) {
         List<Plant> plants = plantRepository.findByRoom_Id(room.getId());
         List<RoomPlant> roomPlants = new ArrayList<>();
+        List<Double> plantMedians = new ArrayList<>();
         Long daysSinceLast = null;
         double averageTotal = 0;
         int averageCount = 0;
@@ -86,17 +87,23 @@ public class RoomService {
             PlantAnalytics analytics = analyticsService.getAnalyticsForPlant(plant.getId());
             Long since = analytics.daysSinceLastWatering();
             Double average = analytics.averageDaysBetweenWaterings();
+            Double median = analytics.medianDaysBetweenWaterings();
 
             // The room was last watered whenever its most recently watered plant was.
             if (since != null && (daysSinceLast == null || since < daysSinceLast)) {
                 daysSinceLast = since;
             }
+            // Each plant counts once, however often it is watered: the room average answers
+            // how often watering happens here, and a cactus is part of that rhythm too.
             if (average != null) {
                 averageTotal += average;
                 averageCount++;
             }
+            if (median != null) {
+                plantMedians.add(median);
+            }
             roomPlants.add(new RoomPlant(plant.getId(), plant.getName(), since,
-                    analytics.medianDaysBetweenWaterings(), analytics.overdue()));
+                    median, analytics.overdue()));
         }
 
         // Thirstiest first, so the plants at risk of being forgotten head the list. A plant
@@ -104,7 +111,11 @@ public class RoomService {
         roomPlants.sort(Comparator.comparing(RoomPlant::daysSinceLastWatering,
                 Comparator.nullsFirst(Comparator.reverseOrder())));
         Double roomAverage = averageCount == 0 ? null : averageTotal / averageCount;
+        // The median of the plants' medians, for the same reason: one number per plant. It is
+        // reported alongside the average because overdue is judged by a median, so a card
+        // showing only the average explained its own warnings in the wrong units.
+        Double roomMedian = plantMedians.isEmpty() ? null : Medians.of(plantMedians);
         return new RoomStats(room.getId(), room.getName(), plants.size(),
-                daysSinceLast, roomAverage, roomPlants);
+                daysSinceLast, roomAverage, roomMedian, roomPlants);
     }
 }

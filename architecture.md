@@ -35,6 +35,7 @@ org.example.plants
 │   ├── WateringService.java         # Watering events, weather enrichment
 │   ├── AnalyticsService.java        # Average and median interval, days since last
 │   ├── RoomService.java             # Room CRUD, per-room statistics
+│   ├── Medians.java                 # The median rule, shared by plant and room stats
 │   └── WeatherService.java          # Open-Meteo lookups, location persistence
 ├── repository/                      # One JpaRepository per entity
 ├── model/
@@ -50,7 +51,7 @@ org.example.plants
     ├── BulkWateringRequest.java     # plantIds, note, fertilizer — no amount, see below
     ├── PlantAnalytics.java          # totalWaterings, average/median interval, daysSinceLast, overdue
     ├── RoomCreateRequest.java       # name
-    ├── RoomStats.java               # roomId, name, plantCount, daysSinceLast, average, plants
+    ├── RoomStats.java               # roomId, name, plantCount, daysSinceLast, average, median, plants
     └── RoomPlant.java               # plantId, name, daysSinceLast, median, overdue
 ```
 
@@ -67,7 +68,7 @@ Static files served from `src/main/resources/static/`:
 | Plants | Add a plant (name, species, room, spot), photo upload and gallery with lightbox, QR code, delete |
 | Watering | Water a whole room via checkboxes, record a single watering, weather location picker, event list |
 | Analytics | Per plant: room and spot editing, photo slideshow, stat cards, watering and temperature charts, history |
-| Rooms | Per room: plant count, last watered, average interval, its plants longest-unwatered first; add, rename, delete, move a plant |
+| Rooms | Per room: plant count, last watered, median and average interval, its plants longest-unwatered first; add, rename, delete, move a plant |
 
 The selected plant on the Watering and Analytics tabs is kept per tab in `localStorage`, so
 switching tabs or reloading does not reset the dropdown.
@@ -168,11 +169,19 @@ PUT /plants/{id}/room  { "roomId": 3 }                   // null is rejected
 GET /rooms/stats
 [ { "roomId": 1, "name": "Living room", "plantCount": 3,
     "daysSinceLastWatering": 2, "averageDaysBetweenWaterings": 6.0,
+    "medianDaysBetweenWaterings": 5.0,
     "plants": [ { "plantId": 11, "name": "Pothos",
                   "daysSinceLastWatering": 20,
                   "medianDaysBetweenWaterings": 5.0,
                   "overdue": true } ] } ]
 ```
+
+Both room intervals take one number per plant — the mean of the plants' means, the median of
+their medians — so a plant watered fifty times does not outvote a cactus watered twice. They
+describe how often watering happens in the room, not how much any one plant drinks. Both are
+reported because `overdue` is judged by a median, and a card showing only the average would
+explain its own warnings in the wrong units. `Medians.of` is shared with `AnalyticsService`
+so the two cannot drift apart.
 
 `plants` holds every plant in the room, ordered longest-unwatered first, with one never
 watered sorting above them all. `daysSinceLastWatering` on the room itself is its *most

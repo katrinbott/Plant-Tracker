@@ -112,7 +112,56 @@ class RoomServiceTest {
         // The room counts as watered when its most recently watered plant was.
         assertThat(stats.daysSinceLastWatering()).isEqualTo(2L);
         assertThat(stats.averageDaysBetweenWaterings()).isEqualTo(6.0);
+        assertThat(stats.medianDaysBetweenWaterings()).isEqualTo(6.0);
         assertThat(stats.plants()).extracting(RoomPlant::overdue).containsOnly(false);
+    }
+
+    // One number per plant on both sides, so a plant watered fifty times does not outvote a
+    // cactus watered twice: the room's figures describe how often watering happens here.
+    @Test
+    void getRoomStats_roomMedianIsTheMedianOfThePlantMedians() {
+        Room room = new Room("Living room");
+        room.setId(1L);
+        when(roomRepository.findAllByOrderByNameAsc()).thenReturn(List.of(room));
+        when(plantRepository.findByRoom_Id(1L)).thenReturn(
+                List.of(plant(10L, "Monstera"), plant(11L, "Pothos"), plant(12L, "Cactus")));
+        // Medians 7, 4 and 40: the mean of them is 17, the median 7, so the two cannot be
+        // confused for one another.
+        when(analyticsService.getAnalyticsForPlant(10L)).thenReturn(new PlantAnalytics(5, 7.0, 7.0, 2L, false));
+        when(analyticsService.getAnalyticsForPlant(11L)).thenReturn(new PlantAnalytics(9, 4.0, 4.0, 1L, false));
+        when(analyticsService.getAnalyticsForPlant(12L)).thenReturn(new PlantAnalytics(3, 40.0, 40.0, 5L, false));
+
+        RoomStats stats = roomService.getRoomStats().get(0);
+
+        assertThat(stats.medianDaysBetweenWaterings()).isEqualTo(7.0);
+        assertThat(stats.averageDaysBetweenWaterings()).isEqualTo(17.0);
+    }
+
+    @Test
+    void getRoomStats_roomMedianAveragesTheTwoMiddlePlantsWhenThereIsAnEvenNumber() {
+        Room room = new Room("Living room");
+        room.setId(1L);
+        when(roomRepository.findAllByOrderByNameAsc()).thenReturn(List.of(room));
+        when(plantRepository.findByRoom_Id(1L))
+                .thenReturn(List.of(plant(10L, "Monstera"), plant(11L, "Pothos")));
+        when(analyticsService.getAnalyticsForPlant(10L)).thenReturn(new PlantAnalytics(5, 7.0, 8.0, 2L, false));
+        when(analyticsService.getAnalyticsForPlant(11L)).thenReturn(new PlantAnalytics(4, 5.0, 5.0, 1L, false));
+
+        assertThat(roomService.getRoomStats().get(0).medianDaysBetweenWaterings()).isEqualTo(6.5);
+    }
+
+    // A plant with too few waterings has no median of its own, so it cannot contribute one.
+    @Test
+    void getRoomStats_roomMedianSkipsPlantsWithoutOne() {
+        Room room = new Room("Living room");
+        room.setId(1L);
+        when(roomRepository.findAllByOrderByNameAsc()).thenReturn(List.of(room));
+        when(plantRepository.findByRoom_Id(1L))
+                .thenReturn(List.of(plant(10L, "Monstera"), plant(11L, "Cutting")));
+        when(analyticsService.getAnalyticsForPlant(10L)).thenReturn(new PlantAnalytics(5, 7.0, 7.0, 2L, false));
+        when(analyticsService.getAnalyticsForPlant(11L)).thenReturn(new PlantAnalytics(1, null, null, 3L, false));
+
+        assertThat(roomService.getRoomStats().get(0).medianDaysBetweenWaterings()).isEqualTo(7.0);
     }
 
     // Thirstiest first, whether or not a plant is flagged: the Rooms tab lists every plant
@@ -198,6 +247,7 @@ class RoomServiceTest {
                 .returns(false, RoomPlant::overdue)
                 .returns(null, RoomPlant::medianDaysBetweenWaterings);
         assertThat(stats.averageDaysBetweenWaterings()).isNull();
+        assertThat(stats.medianDaysBetweenWaterings()).isNull();
         assertThat(stats.daysSinceLastWatering()).isEqualTo(40L);
     }
 
@@ -214,6 +264,7 @@ class RoomServiceTest {
         assertThat(stats.plantCount()).isEqualTo(1);
         assertThat(stats.daysSinceLastWatering()).isNull();
         assertThat(stats.averageDaysBetweenWaterings()).isNull();
+        assertThat(stats.medianDaysBetweenWaterings()).isNull();
         assertThat(stats.plants()).singleElement()
                 .returns(null, RoomPlant::daysSinceLastWatering);
     }

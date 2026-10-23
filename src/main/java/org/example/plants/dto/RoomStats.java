@@ -8,4 +8,5 @@ public record RoomStats(
         int plantCount,
         Long daysSinceLastWatering,
         Double averageDaysBetweenWaterings,
+        Double medianDaysBetweenWaterings,
         List<RoomPlant> plants) {}

@@ -37,7 +37,7 @@ class RoomControllerTest {
     @Test
     void getRoomStats_returnsCountsAverageAndPlants() throws Exception {
         when(roomService.getRoomStats()).thenReturn(List.of(new RoomStats(
-                1L, "Living room", 2, 2L, 6.0,
+                1L, "Living room", 2, 2L, 6.0, 5.0,
                 List.of(new RoomPlant(11L, "Pothos", 20L, 5.0, true),
                         new RoomPlant(10L, "Monstera", 2L, 7.0, false)))));
 
@@ -47,6 +47,7 @@ class RoomControllerTest {
                 .andExpect(jsonPath("$[0].plantCount").value(2))
                 .andExpect(jsonPath("$[0].daysSinceLastWatering").value(2))
                 .andExpect(jsonPath("$[0].averageDaysBetweenWaterings").value(6.0))
+                .andExpect(jsonPath("$[0].medianDaysBetweenWaterings").value(5.0))
                 .andExpect(jsonPath("$[0].plants[0].name").value("Pothos"))
                 .andExpect(jsonPath("$[0].plants[0].daysSinceLastWatering").value(20))
                 .andExpect(jsonPath("$[0].plants[0].overdue").value(true))
@@ -56,12 +57,13 @@ class RoomControllerTest {
     @Test
     void getRoomStats_serialisesNullsForRoomWithNoWaterings() throws Exception {
         when(roomService.getRoomStats()).thenReturn(List.of(new RoomStats(
-                1L, "Hallway", 1, null, null, List.of())));
+                1L, "Hallway", 1, null, null, null, List.of())));
 
         mockMvc.perform(get("/rooms/stats"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].daysSinceLastWatering").isEmpty())
                 .andExpect(jsonPath("$[0].averageDaysBetweenWaterings").isEmpty())
+                .andExpect(jsonPath("$[0].medianDaysBetweenWaterings").isEmpty())
                 .andExpect(jsonPath("$[0].plants").isEmpty());
     }
 
