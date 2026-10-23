@@ -14,7 +14,8 @@ A Spring Boot app for tracking houseplants, their watering history, and photos, 
 - Organise plants into rooms, with a free-text spot within the room such as "windowsill"
 - Water a whole room in one action, unticking any plant you skipped
 - Rooms tab with per-room plant count, last watered, average interval, and which plants are overdue, i.e. need to be checked
-- Add and delete plants; move a plant to another room from the Analytics tab
+- Each room card lists its plants, with a picker to move one to another room
+- Add and delete plants; move a plant to another room from the Rooms or Analytics tab
 - Upload multiple photos per plant with optional notes
 - Photo gallery with thumbnails, lightbox, and delete per image
 - Record watering events with amount, notes, and whether fertilizer was used; weather data (temperature, humidity, weather code) is fetched automatically via Open-Meteo

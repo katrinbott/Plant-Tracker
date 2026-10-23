@@ -191,6 +191,25 @@ function describeRoomRecency(stats) {
     return `watered ${stats.daysSinceLastWatering} days ago`;
 }
 
+// The room cards list their plants from the cached /plants response rather than
+// fetching per room, the same way the room-watering checklist does.
+function roomPlantRows(roomId) {
+    const roomPlants = plants.filter(p => p.roomId === roomId);
+    if (roomPlants.length === 0) return '<p class="empty" style="margin:0;">No plants in this room yet.</p>';
+    const elsewhere = rooms.filter(r => r.id !== roomId);
+    return roomPlants.map(p => `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; font-size:0.95rem; color:#333;">
+            <span>${escapeHtml(p.name)}${p.location ? ` <span style="color:#888; font-size:0.85rem;">· ${escapeHtml(p.location)}</span>` : ''}</span>
+            ${elsewhere.length === 0 ? '' : `
+                <select onchange="movePlantToRoom(${p.id}, ${roomId}, this)"
+                        style="width:auto; margin-top:0; padding:0.25rem; font-size:0.85rem;">
+                    <option value="">Move to…</option>
+                    ${elsewhere.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('')}
+                </select>`}
+        </div>
+    `).join('');
+}
+
 async function loadRoomStats() {
     const list = document.getElementById('rooms-list');
     try {
@@ -225,6 +244,9 @@ async function loadRoomStats() {
                         </div>
                     </div>
                     ${overdue}
+                    <div style="display:flex; flex-direction:column; gap:0.35rem;">
+                        ${roomPlantRows(s.roomId)}
+                    </div>
                     <div id="room-rename-${s.roomId}" style="display:none; gap:0.5rem;">
                         <input type="text" id="room-rename-input-${s.roomId}" value="${escapeHtml(s.name)}"
                                style="flex:1; margin-top:0; padding:0.4rem; font-size:0.9rem;"
@@ -312,6 +334,25 @@ async function deleteRoom(roomId) {
         return;
     }
     await loadRooms();
+    await loadRoomStats();
+}
+
+async function movePlantToRoom(plantId, fromRoomId, select) {
+    const error = document.getElementById(`room-action-error-${fromRoomId}`);
+    error.textContent = '';
+    if (!select.value) return;
+    try {
+        await apiFetch(`/plants/${plantId}/room`, {
+            method: 'PUT',
+            body: JSON.stringify({ roomId: parseInt(select.value) })
+        });
+    } catch (e) {
+        error.textContent = 'Failed to move the plant.';
+        select.value = '';
+        return;
+    }
+    // Both rooms' counts and stats change, so the whole tab is reloaded.
+    await loadPlants();
     await loadRoomStats();
 }
 
