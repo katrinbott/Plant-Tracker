@@ -14,7 +14,8 @@ A Spring Boot app for tracking houseplants, their watering history, and photos, 
 - Organise plants into rooms, with a free-text spot within the room such as "windowsill"
 - Water a whole room in one action, unticking any plant you skipped
 - Rooms tab with per-room plant count, last watered, average interval, and which plants are overdue, i.e. need to be checked
-- Each room card lists its plants, with a picker to move one to another room
+- Each room card lists its plants, longest-unwatered first, each with its days since watering
+  and a picker to move it to another room
 - Add and delete plants; move a plant to another room from the Rooms or Analytics tab
 - Upload multiple photos per plant with optional notes
 - Photo gallery with thumbnails, lightbox, and delete per image
@@ -157,20 +158,24 @@ has plants also returns `409` — move them to another room first.
     "plantCount": 3,
     "daysSinceLastWatering": 2,
     "averageDaysBetweenWaterings": 6.0,
-    "overduePlants": [
+    "plants": [
       {
         "plantId": 11,
         "name": "Pothos",
         "daysSinceLastWatering": 20,
-        "medianDaysBetweenWaterings": 5.0
+        "medianDaysBetweenWaterings": 5.0,
+        "overdue": true
       }
     ]
   }
 ]
 ```
-A room counts as watered when its most recently watered plant was. A plant is overdue when
-it has gone longer than its own median interval, so a plant with fewer than two waterings
-is never flagged.
+A room counts as watered when its most recently watered plant was — the room's rhythm. The
+`plants` list is the other view: every plant in the room, ordered longest-unwatered first,
+with one never watered sorting above them all, since "never" is longer ago than any number
+of days. Both numbers are `null` until a plant has two waterings. A plant is overdue when it
+has gone longer than its own median interval, so a plant with fewer than two waterings is
+never flagged.
 
 ### Watering events
 

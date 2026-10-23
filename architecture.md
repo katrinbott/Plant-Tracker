@@ -50,8 +50,8 @@ org.example.plants
     ├── BulkWateringRequest.java     # plantIds, note, fertilizer — no amount, see below
     ├── PlantAnalytics.java          # totalWaterings, average/median interval, daysSinceLast, overdue
     ├── RoomCreateRequest.java       # name
-    ├── RoomStats.java               # roomId, name, plantCount, daysSinceLast, average, overdue
-    └── OverduePlant.java            # plantId, name, daysSinceLast, medianDaysBetweenWaterings
+    ├── RoomStats.java               # roomId, name, plantCount, daysSinceLast, average, plants
+    └── RoomPlant.java               # plantId, name, daysSinceLast, median, overdue
 ```
 
 ## Frontend
@@ -67,7 +67,7 @@ Static files served from `src/main/resources/static/`:
 | Plants | Add a plant (name, species, room, spot), photo upload and gallery with lightbox, QR code, delete |
 | Watering | Water a whole room via checkboxes, record a single watering, weather location picker, event list |
 | Analytics | Per plant: room and spot editing, photo slideshow, stat cards, watering and temperature charts, history |
-| Rooms | Per room: plant count, last watered, average interval, overdue plants; add, rename, delete |
+| Rooms | Per room: plant count, last watered, average interval, its plants longest-unwatered first; add, rename, delete, move a plant |
 
 The selected plant on the Watering and Analytics tabs is kept per tab in `localStorage`, so
 switching tabs or reloading does not reset the dropdown.
@@ -168,10 +168,17 @@ PUT /plants/{id}/room  { "roomId": 3 }                   // null is rejected
 GET /rooms/stats
 [ { "roomId": 1, "name": "Living room", "plantCount": 3,
     "daysSinceLastWatering": 2, "averageDaysBetweenWaterings": 6.0,
-    "overduePlants": [ { "plantId": 11, "name": "Pothos",
-                         "daysSinceLastWatering": 20,
-                         "medianDaysBetweenWaterings": 5.0 } ] } ]
+    "plants": [ { "plantId": 11, "name": "Pothos",
+                  "daysSinceLastWatering": 20,
+                  "medianDaysBetweenWaterings": 5.0,
+                  "overdue": true } ] } ]
 ```
+
+`plants` holds every plant in the room, ordered longest-unwatered first, with one never
+watered sorting above them all. `daysSinceLastWatering` on the room itself is its *most
+recently* watered plant — the room's rhythm — while the per-plant entries are what say
+which plant is at risk. The Rooms tab shows both, and the frontend takes the "check these"
+line from the entries flagged `overdue`.
 
 ### Watering — `/watering`
 

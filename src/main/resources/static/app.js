@@ -200,23 +200,36 @@ function toggleRoomPlants(roomId, open) {
     else expandedRooms.delete(roomId);
 }
 
-// The room cards list their plants from the cached /plants response rather than
-// fetching per room, the same way the room-watering checklist does.
-function roomPlantRows(roomId) {
-    const roomPlants = plants.filter(p => p.roomId === roomId);
-    if (roomPlants.length === 0) return '<p class="empty">No plants in this room yet.</p>';
-    const elsewhere = rooms.filter(r => r.id !== roomId);
-    return roomPlants.map(p => `
+function describeDaysSince(days) {
+    if (days === null) return 'never watered';
+    if (days === 0) return 'today';
+    if (days === 1) return 'yesterday';
+    return `${days} days ago`;
+}
+
+// The rows come from /rooms/stats, which already orders them longest-unwatered first and
+// carries the overdue flag. The spot within the room is not part of the stats, so it is
+// read from the plant cache alongside.
+function roomPlantRows(stats) {
+    if (stats.plants.length === 0) return '<p class="empty">No plants in this room yet.</p>';
+    const elsewhere = rooms.filter(r => r.id !== stats.roomId);
+    return stats.plants.map(p => {
+        const spot = plants.find(cached => cached.id === p.plantId)?.location;
+        return `
         <div class="plant-row">
-            <span><span class="plant-link" onclick="openPlantAnalytics(${p.id})"
-                        title="Show this plant's analytics">${escapeHtml(p.name)}</span>${p.location ? ` <span class="spot">· ${escapeHtml(p.location)}</span>` : ''}</span>
-            ${elsewhere.length === 0 ? '' : `
-                <select class="move-select" onchange="movePlantToRoom(${p.id}, ${roomId}, this)">
-                    <option value="">Move to…</option>
-                    ${elsewhere.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('')}
-                </select>`}
-        </div>
-    `).join('');
+            <span><span class="plant-link" onclick="openPlantAnalytics(${p.plantId})"
+                        title="Show this plant's analytics">${escapeHtml(p.name)}</span>${spot ? ` <span class="spot">· ${escapeHtml(spot)}</span>` : ''}</span>
+            <span class="plant-row-right">
+                <span class="days${p.overdue ? ' overdue' : ''}"
+                      ${p.overdue ? `title="Longer than its usual ${p.medianDaysBetweenWaterings.toFixed(1)} days — worth checking"` : ''}>${describeDaysSince(p.daysSinceLastWatering)}</span>
+                ${elsewhere.length === 0 ? '' : `
+                    <select class="move-select" onchange="movePlantToRoom(${p.plantId}, ${stats.roomId}, this)">
+                        <option value="">Move to…</option>
+                        ${elsewhere.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('')}
+                    </select>`}
+            </span>
+        </div>`;
+    }).join('');
 }
 
 async function loadRoomStats() {
@@ -234,9 +247,10 @@ async function loadRoomStats() {
                 s.averageDaysBetweenWaterings !== null
                     ? `avg every ${s.averageDaysBetweenWaterings.toFixed(1)} days` : null,
             ].filter(Boolean).join(' · ');
-            const overdue = s.overduePlants.length === 0 ? '' : `
+            const overduePlants = s.plants.filter(p => p.overdue);
+            const overdue = overduePlants.length === 0 ? '' : `
                 <div style="font-size:0.85rem; color:#c0392b;">
-                    Check: ${s.overduePlants.map(p =>
+                    Check: ${overduePlants.map(p =>
                         `${escapeHtml(p.name)} (${p.daysSinceLastWatering} days, usually every ${p.medianDaysBetweenWaterings.toFixed(1)})`
                     ).join(', ')}
                 </div>`;
@@ -256,7 +270,7 @@ async function loadRoomStats() {
                     <details class="room-plants" ${expandedRooms.has(s.roomId) ? 'open' : ''}
                              ontoggle="toggleRoomPlants(${s.roomId}, this.open)">
                         <summary>Plants</summary>
-                        ${roomPlantRows(s.roomId)}
+                        ${roomPlantRows(s)}
                     </details>
                     <div id="room-rename-${s.roomId}" style="display:none; gap:0.5rem;">
                         <input type="text" id="room-rename-input-${s.roomId}" value="${escapeHtml(s.name)}"

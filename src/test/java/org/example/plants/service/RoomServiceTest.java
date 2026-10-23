@@ -1,6 +1,6 @@
 package org.example.plants.service;
 
-import org.example.plants.dto.OverduePlant;
+import org.example.plants.dto.RoomPlant;
 import org.example.plants.dto.PlantAnalytics;
 import org.example.plants.dto.RoomStats;
 import org.example.plants.model.Plant;
@@ -112,23 +112,44 @@ class RoomServiceTest {
         // The room counts as watered when its most recently watered plant was.
         assertThat(stats.daysSinceLastWatering()).isEqualTo(2L);
         assertThat(stats.averageDaysBetweenWaterings()).isEqualTo(6.0);
-        assertThat(stats.overduePlants()).isEmpty();
+        assertThat(stats.plants()).extracting(RoomPlant::overdue).containsOnly(false);
     }
 
+    // Thirstiest first, whether or not a plant is flagged: the Rooms tab lists every plant
+    // in the room, so the order has to put the longest-unwatered at the top regardless.
     @Test
-    void getRoomStats_listsOverduePlantsWorstFirst() {
+    void getRoomStats_listsEveryPlantLongestUnwateredFirst() {
+        Room room = new Room("Living room");
+        room.setId(1L);
+        when(roomRepository.findAllByOrderByNameAsc()).thenReturn(List.of(room));
+        when(plantRepository.findByRoom_Id(1L)).thenReturn(
+                List.of(plant(10L, "Monstera"), plant(11L, "Pothos"), plant(12L, "Basil")));
+        when(analyticsService.getAnalyticsForPlant(10L)).thenReturn(new PlantAnalytics(5, 7.0, 7.0, 9L, true));
+        when(analyticsService.getAnalyticsForPlant(11L)).thenReturn(new PlantAnalytics(4, 5.0, 5.0, 20L, true));
+        when(analyticsService.getAnalyticsForPlant(12L)).thenReturn(new PlantAnalytics(6, 3.0, 3.0, 1L, false));
+
+        RoomStats stats = roomService.getRoomStats().get(0);
+
+        assertThat(stats.plants()).extracting(RoomPlant::name)
+                .containsExactly("Pothos", "Monstera", "Basil");
+    }
+
+    // A plant with no watering recorded has nothing to compare, and "never" is longer ago
+    // than any number of days, so it heads the list rather than falling off the end.
+    @Test
+    void getRoomStats_sortsANeverWateredPlantFirst() {
         Room room = new Room("Living room");
         room.setId(1L);
         when(roomRepository.findAllByOrderByNameAsc()).thenReturn(List.of(room));
         when(plantRepository.findByRoom_Id(1L))
-                .thenReturn(List.of(plant(10L, "Monstera"), plant(11L, "Pothos")));
-        when(analyticsService.getAnalyticsForPlant(10L)).thenReturn(new PlantAnalytics(5, 7.0, 7.0, 9L, true));
-        when(analyticsService.getAnalyticsForPlant(11L)).thenReturn(new PlantAnalytics(4, 5.0, 5.0, 20L, true));
+                .thenReturn(List.of(plant(10L, "Monstera"), plant(11L, "Cutting")));
+        when(analyticsService.getAnalyticsForPlant(10L)).thenReturn(new PlantAnalytics(5, 7.0, 7.0, 30L, true));
+        when(analyticsService.getAnalyticsForPlant(11L)).thenReturn(new PlantAnalytics(0, null, null, null, false));
 
         RoomStats stats = roomService.getRoomStats().get(0);
 
-        assertThat(stats.overduePlants()).extracting(OverduePlant::name)
-                .containsExactly("Pothos", "Monstera");
+        assertThat(stats.plants()).extracting(RoomPlant::name)
+                .containsExactly("Cutting", "Monstera");
     }
 
     // Whether a plant is overdue is decided in AnalyticsService; see its tests. What
@@ -144,19 +165,22 @@ class RoomServiceTest {
 
         RoomStats stats = roomService.getRoomStats().get(0);
 
-        assertThat(stats.overduePlants()).extracting(OverduePlant::name).containsExactly("Monstera");
-        assertThat(stats.overduePlants().get(0).medianDaysBetweenWaterings()).isEqualTo(5.0);
+        assertThat(stats.plants()).extracting(RoomPlant::name).containsExactly("Monstera");
+        assertThat(stats.plants().get(0).medianDaysBetweenWaterings()).isEqualTo(5.0);
     }
 
     @Test
-    void getRoomStats_omitsPlantsNotFlaggedOverdue() {
+    void getRoomStats_listsAPlantNotFlaggedOverdueWithoutTheFlag() {
         Room room = new Room("Kitchen");
         room.setId(2L);
         when(roomRepository.findAllByOrderByNameAsc()).thenReturn(List.of(room));
         when(plantRepository.findByRoom_Id(2L)).thenReturn(List.of(plant(20L, "Basil")));
         when(analyticsService.getAnalyticsForPlant(20L)).thenReturn(new PlantAnalytics(2, 7.0, 7.0, 7L, false));
 
-        assertThat(roomService.getRoomStats().get(0).overduePlants()).isEmpty();
+        assertThat(roomService.getRoomStats().get(0).plants())
+                .singleElement()
+                .returns("Basil", RoomPlant::name)
+                .returns(false, RoomPlant::overdue);
     }
 
     @Test
@@ -170,7 +194,9 @@ class RoomServiceTest {
 
         RoomStats stats = roomService.getRoomStats().get(0);
 
-        assertThat(stats.overduePlants()).isEmpty();
+        assertThat(stats.plants()).singleElement()
+                .returns(false, RoomPlant::overdue)
+                .returns(null, RoomPlant::medianDaysBetweenWaterings);
         assertThat(stats.averageDaysBetweenWaterings()).isNull();
         assertThat(stats.daysSinceLastWatering()).isEqualTo(40L);
     }
@@ -188,6 +214,7 @@ class RoomServiceTest {
         assertThat(stats.plantCount()).isEqualTo(1);
         assertThat(stats.daysSinceLastWatering()).isNull();
         assertThat(stats.averageDaysBetweenWaterings()).isNull();
-        assertThat(stats.overduePlants()).isEmpty();
+        assertThat(stats.plants()).singleElement()
+                .returns(null, RoomPlant::daysSinceLastWatering);
     }
 }

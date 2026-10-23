@@ -1,7 +1,7 @@
 package org.example.plants.service;
 
-import org.example.plants.dto.OverduePlant;
 import org.example.plants.dto.PlantAnalytics;
+import org.example.plants.dto.RoomPlant;
 import org.example.plants.dto.RoomStats;
 import org.example.plants.model.Plant;
 import org.example.plants.model.Room;
@@ -77,7 +77,7 @@ public class RoomService {
     // place. That is a query per plant, which is fine at this size.
     private RoomStats statsFor(Room room) {
         List<Plant> plants = plantRepository.findByRoom_Id(room.getId());
-        List<OverduePlant> overdue = new ArrayList<>();
+        List<RoomPlant> roomPlants = new ArrayList<>();
         Long daysSinceLast = null;
         double averageTotal = 0;
         int averageCount = 0;
@@ -86,7 +86,6 @@ public class RoomService {
             PlantAnalytics analytics = analyticsService.getAnalyticsForPlant(plant.getId());
             Long since = analytics.daysSinceLastWatering();
             Double average = analytics.averageDaysBetweenWaterings();
-            Double median = analytics.medianDaysBetweenWaterings();
 
             // The room was last watered whenever its most recently watered plant was.
             if (since != null && (daysSinceLast == null || since < daysSinceLast)) {
@@ -96,14 +95,16 @@ public class RoomService {
                 averageTotal += average;
                 averageCount++;
             }
-            if (analytics.overdue()) {
-                overdue.add(new OverduePlant(plant.getId(), plant.getName(), since, median));
-            }
+            roomPlants.add(new RoomPlant(plant.getId(), plant.getName(), since,
+                    analytics.medianDaysBetweenWaterings(), analytics.overdue()));
         }
 
-        overdue.sort(Comparator.comparingLong(OverduePlant::daysSinceLastWatering).reversed());
+        // Thirstiest first, so the plants at risk of being forgotten head the list. A plant
+        // with no watering recorded sorts above every number: "never" is the longest ago.
+        roomPlants.sort(Comparator.comparing(RoomPlant::daysSinceLastWatering,
+                Comparator.nullsFirst(Comparator.reverseOrder())));
         Double roomAverage = averageCount == 0 ? null : averageTotal / averageCount;
         return new RoomStats(room.getId(), room.getName(), plants.size(),
-                daysSinceLast, roomAverage, overdue);
+                daysSinceLast, roomAverage, roomPlants);
     }
 }

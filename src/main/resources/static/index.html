@@ -127,6 +127,11 @@
             color: #333;
         }
         .plant-row .spot { color: #888; font-size: 0.85rem; }
+        .plant-row-right { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+        .plant-row .days { color: #888; font-size: 0.85rem; white-space: nowrap; }
+        /* Red on the days since, not the median: the median is the plant's normal rhythm,
+           and it is the time since watering that is out of range. */
+        .plant-row .days.overdue { color: #c0392b; font-weight: bold; }
         .plant-row .plant-link { cursor: pointer; }
         .plant-row .plant-link:hover { text-decoration: underline; }
         /* A picker that reads as one of the card's buttons rather than a form field. */

@@ -1,6 +1,6 @@
 package org.example.plants.controller;
 
-import org.example.plants.dto.OverduePlant;
+import org.example.plants.dto.RoomPlant;
 import org.example.plants.dto.RoomStats;
 import org.example.plants.model.Room;
 import org.example.plants.service.RoomService;
@@ -35,10 +35,11 @@ class RoomControllerTest {
     }
 
     @Test
-    void getRoomStats_returnsCountsAverageAndOverduePlants() throws Exception {
+    void getRoomStats_returnsCountsAverageAndPlants() throws Exception {
         when(roomService.getRoomStats()).thenReturn(List.of(new RoomStats(
                 1L, "Living room", 2, 2L, 6.0,
-                List.of(new OverduePlant(11L, "Pothos", 20L, 5.0)))));
+                List.of(new RoomPlant(11L, "Pothos", 20L, 5.0, true),
+                        new RoomPlant(10L, "Monstera", 2L, 7.0, false)))));
 
         mockMvc.perform(get("/rooms/stats"))
                 .andExpect(status().isOk())
@@ -46,8 +47,10 @@ class RoomControllerTest {
                 .andExpect(jsonPath("$[0].plantCount").value(2))
                 .andExpect(jsonPath("$[0].daysSinceLastWatering").value(2))
                 .andExpect(jsonPath("$[0].averageDaysBetweenWaterings").value(6.0))
-                .andExpect(jsonPath("$[0].overduePlants[0].name").value("Pothos"))
-                .andExpect(jsonPath("$[0].overduePlants[0].daysSinceLastWatering").value(20));
+                .andExpect(jsonPath("$[0].plants[0].name").value("Pothos"))
+                .andExpect(jsonPath("$[0].plants[0].daysSinceLastWatering").value(20))
+                .andExpect(jsonPath("$[0].plants[0].overdue").value(true))
+                .andExpect(jsonPath("$[0].plants[1].overdue").value(false));
     }
 
     @Test
@@ -59,7 +62,7 @@ class RoomControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].daysSinceLastWatering").isEmpty())
                 .andExpect(jsonPath("$[0].averageDaysBetweenWaterings").isEmpty())
-                .andExpect(jsonPath("$[0].overduePlants").isEmpty());
+                .andExpect(jsonPath("$[0].plants").isEmpty());
     }
 
     @Test

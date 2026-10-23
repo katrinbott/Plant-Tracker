@@ -8,4 +8,4 @@ public record RoomStats(
         int plantCount,
         Long daysSinceLastWatering,
         Double averageDaysBetweenWaterings,
-        List<OverduePlant> overduePlants) {}
+        List<RoomPlant> plants) {}
