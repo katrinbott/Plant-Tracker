@@ -346,7 +346,8 @@ async function loadPlants() {
                 <div class="card" style="flex-direction:column; align-items:stretch; gap:0.75rem;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <div class="card-info">
-                            <strong>${p.name}</strong>
+                            <strong onclick="openPlantAnalytics(${p.id})" title="Show this plant's analytics"
+                                    style="cursor:pointer;">${p.name}</strong>
                             <span>${[p.species, escapeHtml(roomName(p.roomId) ?? ''), p.location].filter(Boolean).join(' · ')}</span>
                         </div>
                         <div style="display:flex; gap:0.5rem; align-items:center;">
@@ -806,6 +807,15 @@ let selectedAnalyticsPlantId = loadStored('analyticsPlantId');
 function selectWateringPlant(id) {
     selectedWateringPlantId = id;
     store('wateringPlantId', id);
+}
+
+// Sets the selection before switching tabs: showTab repopulates the dropdown, which picks
+// up selectedAnalyticsPlantId itself and then loads. Calling selectAnalyticsPlant here
+// instead would fetch the analytics twice.
+function openPlantAnalytics(plantId) {
+    selectedAnalyticsPlantId = plantId;
+    store('analyticsPlantId', plantId);
+    showTab('analytics');
 }
 
 function selectAnalyticsPlant(id) {
