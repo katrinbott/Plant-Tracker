@@ -46,10 +46,11 @@ A Spring Boot app for tracking houseplants, their watering history, and photos, 
 
 3. Run:
    ```
-   mvn spring-boot:run
+   ./mvnw spring-boot:run
    ```
 
-The schema is created automatically on first start.
+The schema is created automatically on first start. Starting the app never inserts rows — if
+you want plants to look at, run one of the scripts in [`seed/`](seed/README.md) by hand.
 
 The frontend is available at `http://localhost:8080`.
 
