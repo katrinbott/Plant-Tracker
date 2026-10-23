@@ -249,10 +249,7 @@ class PlantControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // A plant serializes its room as a bare roomId, which the frontend reads. The
-    // association itself must stay out of the JSON: it is lazily fetched, so with
-    // open-in-view off Jackson would walk into a detached proxy and fail at runtime.
-    // Nothing here is a proxy, so only asserting roomId would let that regression through.
+    // The room must stay out of the JSON: at runtime it is a lazy proxy and would throw.
     private static Room roomWithId(Long id, String name) {
         Room room = new Room(name);
         room.setId(id);
