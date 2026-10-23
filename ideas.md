@@ -34,6 +34,19 @@ which is deliberately not committed.
     needs something in Bluetooth range polling the sensors — a small collector process (a Pi,
     or the laptop) posting to an endpoint here, rather than the server doing it itself. Decide
     pull vs. receive before any schema work
+- "Move all plants to…" on a room card. A room cannot be deleted while it holds plants, and
+  the only way to empty a twelve-plant room is the per-plant picker, twelve times — so the
+  rooms work made emptying a room possible but not quick. A second picker in the card header,
+  beside Rename and Delete, closes the loop the delete-refusal opens. Cheapest version loops
+  the existing `PUT /plants/{id}/room` client-side; the honest version is one endpoint that
+  moves them in a transaction, which also stops a half-finished move
+- Show each plant's watering state in the room-watering checklist. Deciding who to water
+  currently shows name and spot only, while the Rooms tab one tab over shows days since
+  watering, the usual interval and a red mark for overdue. Every plant is also ticked by
+  default including ones watered today, so watering a room twice in a day quietly records
+  same-day duplicates — harmless to the maths, since those are grouped, but the tick was never
+  a decision. Either show days-since per row, or leave plants watered today unticked with a
+  "watered today" label. Needs `/rooms/stats` in the Watering tab, which it does not load today
 
 ## Suggested order
 
@@ -213,6 +226,24 @@ against a database that already had plants.
 Real defects, deliberately left for later, each with what it is waiting for. Distinct from
 "Known and accepted" below, which is a list of things that are fine as they are.
 
+### A name longer than 100 characters answers 500 — do on `feature/rooms`, or just after it
+
+The most reachable of these: a user can hit it by pasting. `rooms.name`, `plants.name`,
+`plants.species` and `plants.location` are all `VARCHAR(100)`, **no DTO in the project carries
+`@Size`**, and `index.html` has **zero** `maxlength` attributes. Postgres rejects an over-long
+value outright (SQLSTATE 22001 — it truncates nothing), Hibernate wraps that as
+`DataIntegrityViolationException`, and Spring maps the unhandled exception to **500**. Same
+shape as the two bare `RuntimeException`s below: a bad request reported as a server fault.
+
+Found by reading the schema against the DTOs, **not reproduced at runtime** — the app was not
+running. Confirm first: `POST /rooms` with a 101-character name, expect 500, want 400.
+
+Fix: `@Size(max = 100)` on `RoomCreateRequest.name` and the three `PlantCreateRequest` fields,
+plus `maxlength="100"` on the matching inputs so the UI refuses before the request is made.
+Worth a test per endpoint, since the DTO annotation is the kind of thing a later refactor drops
+silently. Listed for `feature/rooms` because that branch introduced `RoomCreateRequest` and the
+`rooms.name` column, but it is equally defensible just after the merge.
+
 ### Two bare `RuntimeException`s answer 500 — do on `main`, after rooms merges
 
 Both predate the rooms branch and are reachable today. Spring maps an unannotated
@@ -264,6 +295,21 @@ Not patched in isolation on purpose: the edit form collapses it to one form, one
 request, and a narrower fix here would be thrown away. If the edit form slips, the cheap interim
 fix is to run `loadPlants()` in a `finally` so the UI at least stops lying about what was saved.
 
+### Two inconsistencies in the room endpoints — small, do any time
+
+- **`PATCH /rooms/{id}` answers 409 before 404.** The controller tests
+  `nameTakenByOtherRoom(name, id)` first, so renaming a room that does not exist to a name
+  another room holds returns 409 rather than 404. `DELETE /rooms/{id}` checks existence first
+  and gets this right, so the two endpoints disagree with each other. `architecture.md` lists
+  both codes for PATCH without stating precedence, so the docs are silent rather than wrong.
+  Fix: hoist the `roomExists` check above the name check, as delete already does.
+- **`deleteRoom`'s guard is implemented twice and its return value is dead.** The controller
+  checks `roomExists` then `plantCount` to choose between 404, 409 and 204, then calls
+  `roomService.deleteRoom(id)`, which re-checks `existsById` and `plantCount` and returns a
+  `boolean` nobody reads. One rule in two places is how the two drift apart. Either the service
+  keeps the guard and the controller trusts its boolean, or the service drops to a plain delete
+  — the second is cleaner, since the controller has to distinguish 404 from 409 anyway.
+
 ---
 
 ## Known and accepted
@@ -281,3 +327,9 @@ surprises nor "fixed" by someone who assumes they were overlooked.
   no space between the attributes. Browsers recover and it renders correctly, which is why it
   has gone unnoticed. Pre-existing, not a rooms issue. (Searched for rather than cited by line,
   since line numbers drift.)
+- **Creating a room is check-then-act** — `nameTaken` then `createRoom` is not atomic, so two
+  concurrent requests could both pass the check, and the second would hit the `UNIQUE`
+  constraint and answer 500. Single-user app, so this is close to unreachable; logged only so it
+  is not mistaken for an oversight. Note it pairs with the case-sensitivity entry above: the
+  constraint is case-sensitive while the check is not, so that backstop would only catch an
+  exact collision anyway.
